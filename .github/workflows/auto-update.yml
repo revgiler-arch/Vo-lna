@@ -82,6 +82,11 @@ jobs:
 
       - name: Read version
         run: echo "VERSION_CODE=$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' app/build.gradle.kts)" >> "$GITHUB_ENV"
+      - name: Replace previous release
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete latest --cleanup-tag -y -R "$GITHUB_REPOSITORY" || true
       - uses: softprops/action-gh-release@v2
         if: steps.check.outputs.changed == 'true'
         with:
