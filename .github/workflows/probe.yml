@@ -1,0 +1,26 @@
+name: Probe search
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew && ./gradlew :app:testReleaseUnitTest --tests com.volna.music.ProbeTest -i | grep -E "\| " || true
+      - name: Publish
+        if: always()
+        run: |
+          cp app/build/probe.txt /tmp/probe.txt 2>/dev/null || echo "no probe output" > /tmp/probe.txt
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          git checkout --orphan probe-results && git rm -rf -q . && rm -rf .gradle app build 2>/dev/null || true
+          cp /tmp/probe.txt probe.txt && git add probe.txt && git commit -q -m probe && git push -f origin probe-results

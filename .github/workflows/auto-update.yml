@@ -1,0 +1,92 @@
+name: Auto-update extractor
+
+# Каждый день проверяем, не обновила ли команда NewPipe свою библиотеку
+# (они чинят её, когда YouTube что-то меняет). Если обновили — пересобираем «Волну»,
+# проверяем, что поиск работает, и публикуем новый APK.
+on:
+  schedule:
+    - cron: "17 3 * * *"   # 07:17 по Баку
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for a newer extractor
+        id: check
+        run: |
+          latest=$(curl -fsSL https://raw.githubusercontent.com/TeamNewPipe/NewPipe/dev/gradle/libs.versions.toml \
+            | sed -n 's/^teamnewpipe-newpipe-extractor *= *"\(.*\)".*/\1/p')
+          current=$(sed -n 's/.*NewPipeExtractor:\([^"]*\)".*/\1/p' app/build.gradle.kts)
+          echo "current=$current latest=$latest"
+          if [ -z "$latest" ] || [ "$latest" = "$current" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump extractor and version
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          sed -i "s|NewPipeExtractor:[^\"]*\"|NewPipeExtractor:${{ steps.check.outputs.latest }}\"|" app/build.gradle.kts
+          python3 - <<'PY'
+          import re
+          p = 'app/build.gradle.kts'; s = open(p).read()
+          code = int(re.search(r'versionCode = (\d+)', s).group(1)) + 1
+          name = re.search(r'versionName = "([^"]+)"', s).group(1)
+          base = '.'.join(name.split('.')[:2])
+          s = re.sub(r'versionCode = \d+', f'versionCode = {code}', s)
+          s = re.sub(r'versionName = "[^"]+"', f'versionName = "{base}.{code}"', s)
+          open(p, 'w').write(s)
+          print('new version', base, code)
+          PY
+
+      - uses: actions/setup-java@v4
+        if: steps.check.outputs.changed == 'true'
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.check.outputs.changed == 'true'
+
+      - name: Decrypt signing key
+        if: steps.check.outputs.changed == 'true'
+        env:
+          SIGNING_KEY_PASS: ${{ secrets.SIGNING_KEY_PASS }}
+        run: |
+          if [ -z "$SIGNING_KEY_PASS" ]; then
+            echo "::error::Нет секрета SIGNING_KEY_PASS (Settings → Secrets and variables → Actions)"; exit 1
+          fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in app/volna.keystore.enc -out app/volna.keystore -pass env:SIGNING_KEY_PASS
+
+      - name: Build and check search
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease :app:testReleaseUnitTest --tests com.volna.music.ProbeTest.searchWorks
+          cp app/build/outputs/apk/release/*.apk Volna.apk
+
+      - name: Commit
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name "volna-bot"
+          git config user.email "volna-bot@users.noreply.github.com"
+          git commit -am "Auto: NewPipeExtractor ${{ steps.check.outputs.latest }}"
+          git push origin HEAD:main
+
+      - name: Read version
+        run: echo "VERSION_CODE=$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' app/build.gradle.kts)" >> "$GITHUB_ENV"
+      - uses: softprops/action-gh-release@v2
+        if: steps.check.outputs.changed == 'true'
+        with:
+          tag_name: latest
+          name: Волна (последняя сборка)
+          body: "versionCode: ${{ env.VERSION_CODE }} · автообновление библиотеки YouTube"
+          files: Volna.apk
+          make_latest: true
