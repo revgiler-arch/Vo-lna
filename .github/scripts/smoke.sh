@@ -66,6 +66,10 @@ tap "Оформление"; sleep 1; tap "Изумрудная"; sleep 3; shot 1
 open_player; shot 17_player_emerald; adb shell input keyevent 4; sleep 2
 tap "Оформление"; sleep 1; tap "Тёмная"; sleep 2
 adb shell input swipe 540 600 540 1500 400; sleep 2; shot 18_pull_refresh
+# смахнуть плеер вниз — должен свернуться
+open_player; shot 19_player_open
+adb shell input swipe 540 500 540 1500 350; sleep 3; shot 20_after_swipe_down
+dump; grep -q 'Сейчас играет' $O/ui.xml && log "[ПЛЕЕР НЕ СВЕРНУЛСЯ]" || log "[плеер свернулся свайпом]"
 
 adb logcat -d > $O/logcat.txt
 log "== вылеты:"; grep -E "FATAL EXCEPTION|AndroidRuntime" -A15 $O/logcat.txt | head -60 | tee -a $R

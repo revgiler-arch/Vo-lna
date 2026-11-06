@@ -21,7 +21,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -207,9 +208,35 @@ private fun FullPlayer(vm: MainVm, onClose: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     val ink = LocalPanelInk.current
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    // смахивание вниз: экран едет за пальцем и сворачивается, если протянуть достаточно
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val dragY = remember { androidx.compose.animation.core.Animatable(0f) }
+    val closeAt = with(androidx.compose.ui.platform.LocalDensity.current) { 140.dp.toPx() }
+    val onDownDrag: (Float) -> Unit = { dy -> scope.launch { dragY.snapTo((dragY.value + dy).coerceAtLeast(0f)) } }
+    val onDownEnd: () -> Unit = {
+        if (dragY.value > closeAt) {
+            onClose()
+            scope.launch { kotlinx.coroutines.delay(400); dragY.snapTo(0f) }
+        } else {
+            scope.launch { dragY.animateTo(0f) }
+        }
+    }
+
+    Surface(
+        Modifier.fillMaxSize().graphicsLayer { translationY = dragY.value },
+        color = MaterialTheme.colorScheme.background,
+    ) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().padding(4.dp).pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onDragEnd = onDownEnd,
+                        onDragCancel = onDownEnd,
+                        onVerticalDrag = { change, dy -> change.consume(); onDownDrag(dy) },
+                    )
+                },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 IconButton(onClick = onClose, modifier = Modifier.size(56.dp)) {
                     Icon(Icons.Filled.KeyboardArrowDown, "Свернуть", Modifier.size(32.dp))
                 }
@@ -230,7 +257,7 @@ private fun FullPlayer(vm: MainVm, onClose: () -> Unit) {
                 if (showQueue) {
                     QueueList(vm)
                 } else {
-                    SwipeArtwork(vm, t.thumb)
+                    SwipeArtwork(vm, t.thumb, onDownDrag, onDownEnd)
                 }
             }
 
@@ -321,26 +348,37 @@ private fun FullPlayer(vm: MainVm, onClose: () -> Unit) {
 
 /** Обложка, которую можно смахнуть: влево — следующий трек, вправо — предыдущий. */
 @Composable
-private fun SwipeArtwork(vm: MainVm, thumb: String?) {
+private fun SwipeArtwork(vm: MainVm, thumb: String?, onDownDrag: (Float) -> Unit, onDownEnd: () -> Unit) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val offset = remember { androidx.compose.animation.core.Animatable(0f) }
     val threshold = with(androidx.compose.ui.platform.LocalDensity.current) { 90.dp.toPx() }
     Box(
         Modifier.fillMaxSize().padding(24.dp)
             .pointerInput(Unit) {
-                detectHorizontalDragGestures(
+                // направление выбираем по первому движению: вбок — переключить трек, вниз — свернуть
+                var axis = 0 // 0 — ещё не ясно, 1 — по горизонтали, 2 — по вертикали
+                detectDragGestures(
+                    onDragStart = { axis = 0 },
                     onDragEnd = {
-                        val v = offset.value
-                        when {
-                            v < -threshold -> vm.next()
-                            v > threshold -> vm.previous()
+                        if (axis == 1) {
+                            val v = offset.value
+                            when {
+                                v < -threshold -> vm.next()
+                                v > threshold -> vm.previous()
+                            }
+                            scope.launch { offset.animateTo(0f) }
+                        } else if (axis == 2) {
+                            onDownEnd()
                         }
-                        scope.launch { offset.animateTo(0f) }
                     },
-                    onDragCancel = { scope.launch { offset.animateTo(0f) } },
-                    onHorizontalDrag = { change, dx ->
+                    onDragCancel = {
+                        scope.launch { offset.animateTo(0f) }
+                        if (axis == 2) onDownEnd()
+                    },
+                    onDrag = { change, drag ->
                         change.consume()
-                        scope.launch { offset.snapTo(offset.value + dx) }
+                        if (axis == 0) axis = if (kotlin.math.abs(drag.x) > kotlin.math.abs(drag.y)) 1 else 2
+                        if (axis == 1) scope.launch { offset.snapTo(offset.value + drag.x) } else onDownDrag(drag.y)
                     },
                 )
             },

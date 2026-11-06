@@ -119,9 +119,41 @@ class MainVm(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---------- работа в фоне ----------
+    private val uiPrefs = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE)
+    var batteryHint by mutableStateOf(false); private set
+
+    private fun ignoringBattery(): Boolean {
+        val pm = getApplication<Application>().getSystemService(android.os.PowerManager::class.java)
+        return pm?.isIgnoringBatteryOptimizations(getApplication<Application>().packageName) ?: true
+    }
+
+    fun refreshBatteryHint() {
+        batteryHint = !ignoringBattery() && !uiPrefs.getBoolean("battery_hint_closed", false)
+    }
+
+    /** Попросить систему не «усыплять» «Волну» в фоне — иначе многие телефоны глушат музыку через ~30 минут. */
+    fun requestNoBatteryLimits() {
+        val ctx = getApplication<Application>()
+        val direct = android.content.Intent(
+            android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            android.net.Uri.parse("package:${ctx.packageName}"),
+        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        val list = android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { ctx.startActivity(direct) }.recoverCatching { ctx.startActivity(list) }
+            .onFailure { toast("Откройте: Настройки → Батарея → Волна → «Без ограничений»") }
+    }
+
+    fun closeBatteryHint() {
+        uiPrefs.edit().putBoolean("battery_hint_closed", true).apply()
+        batteryHint = false
+    }
+
     init {
         connect()
         checkUpdate()
+        refreshBatteryHint()
         if (ytLoggedIn) loadYt()
         refreshHome()
         refreshLibrary()

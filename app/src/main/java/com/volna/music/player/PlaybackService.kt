@@ -42,6 +42,8 @@ class PlaybackService : MediaSessionService() {
 
     private var radioJob: Job? = null
     private val retried = HashSet<String>()
+    private var autoRetries = 0
+    private var skipsInRow = 0
 
     // учёт прослушивания текущего трека
     private var playRow = -1L
@@ -92,6 +94,70 @@ class PlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) = session
 
+    // ---------- уведомление «Воспроизведение остановлено» ----------
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_RESUME -> { cancelStopped(); resume() }
+            ACTION_DISMISS -> cancelStopped()
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    private fun resume() {
+        if (player.mediaItemCount == 0) return
+        player.currentMediaItem?.mediaId?.let(StreamResolver::invalidate)
+        retried.clear(); autoRetries = 0; skipsInRow = 0
+        if (player.playbackState == Player.STATE_ENDED) {
+            if (player.hasNextMediaItem()) player.seekToNextMediaItem() else { launchRadio(); return }
+        }
+        player.prepare()
+        player.play()
+    }
+
+    private fun showStopped(text: String) {
+        val nm = getSystemService(android.app.NotificationManager::class.java) ?: return
+        if (nm.getNotificationChannel(ALERT_CHANNEL) == null) {
+            nm.createNotificationChannel(
+                android.app.NotificationChannel(
+                    ALERT_CHANNEL, "Остановка воспроизведения", android.app.NotificationManager.IMPORTANCE_HIGH,
+                ).apply { description = "Когда музыка остановилась и нужно нажать «Продолжить»" },
+            )
+        }
+        fun action(a: String, code: Int) = PendingIntent.getService(
+            this, code, Intent(this, PlaybackService::class.java).setAction(a),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val open = PendingIntent.getActivity(
+            this, 3, packageManager.getLaunchIntentForPackage(packageName),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val n = androidx.core.app.NotificationCompat.Builder(this, ALERT_CHANNEL)
+            .setSmallIcon(com.volna.music.R.drawable.ic_stat_volna)
+            .setContentTitle("Волна: музыка остановилась")
+            .setContentText(text)
+            .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+            .setCategory(androidx.core.app.NotificationCompat.CATEGORY_STATUS)
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .addAction(0, "Продолжить", action(ACTION_RESUME, 1))
+            .addAction(0, "ОК", action(ACTION_DISMISS, 2))
+            .build()
+        runCatching { nm.notify(ALERT_ID, n) }
+    }
+
+    private fun cancelStopped() {
+        getSystemService(android.app.NotificationManager::class.java)?.cancel(ALERT_ID)
+    }
+
+    companion object {
+        const val ACTION_RESUME = "com.volna.music.RESUME"
+        const val ACTION_DISMISS = "com.volna.music.DISMISS"
+        private const val ALERT_CHANNEL = "alerts"
+        private const val ALERT_ID = 4242
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         // смахнули приложение: если музыка не играет — закрываемся
         if (!player.playWhenReady || player.mediaItemCount == 0) stopSelf()
@@ -132,6 +198,9 @@ class PlaybackService : MediaSessionService() {
             val now = System.currentTimeMillis()
             if (isPlaying) {
                 playingSince = now
+                autoRetries = 0
+                skipsInRow = 0
+                cancelStopped()
             } else if (playingSince > 0) {
                 listenedMs += now - playingSince
                 playingSince = 0
@@ -141,16 +210,40 @@ class PlaybackService : MediaSessionService() {
         override fun onPlayerError(error: PlaybackException) {
             val id = player.currentMediaItem?.mediaId ?: return
             StreamResolver.invalidate(id)
-            // при блокировке IP следующие треки тоже не сыграют — не перебираем очередь впустую
-            if (com.volna.music.ui.isBotBlock(error)) return
-            if (retried.add(id)) {
-                // ссылка могла протухнуть — получаем новую и пробуем ещё раз
-                player.prepare()
-                player.play()
-            } else if (player.hasNextMediaItem()) {
-                player.seekToNextMediaItem()
-                player.prepare()
-                player.play()
+            val blocked = com.volna.music.ui.isBotBlock(error)
+            com.volna.music.Diag.mark(this@PlaybackService, "player error: ${error.errorCodeName} blocked=$blocked")
+            when {
+                // ссылка могла протухнуть — сразу пробуем ещё раз
+                !blocked && retried.add(id) -> { player.prepare(); player.play() }
+                // YouTube просит «подтвердить, что не бот» — подождём и попробуем сами один раз
+                blocked && autoRetries < 1 -> {
+                    autoRetries++
+                    scope.launch {
+                        kotlinx.coroutines.delay(15_000)
+                        StreamResolver.invalidate(id)
+                        player.prepare(); player.play()
+                    }
+                }
+                // этот трек не играет — пропускаем, но не больше трёх подряд
+                !blocked && player.hasNextMediaItem() && skipsInRow < 3 -> {
+                    skipsInRow++
+                    player.seekToNextMediaItem(); player.prepare(); player.play()
+                }
+                else -> showStopped(
+                    if (blocked) "YouTube приостановил выдачу (проверка на бота). Нажмите «Продолжить»."
+                    else "Не удалось загрузить трек: ${com.volna.music.ui.describeError(error).substringBefore("\n\n")}",
+                )
+            }
+        }
+
+        override fun onPlaybackStateChanged(state: Int) {
+            if (state != Player.STATE_ENDED || player.repeatMode != Player.REPEAT_MODE_OFF) return
+            // очередь кончилась: даём радио время догрузиться, иначе сообщаем
+            scope.launch {
+                kotlinx.coroutines.delay(10_000)
+                if (player.playbackState == Player.STATE_ENDED) {
+                    showStopped("Не удалось загрузить продолжение радио. Нажмите «Продолжить».")
+                }
             }
         }
     }
@@ -185,6 +278,11 @@ class PlaybackService : MediaSessionService() {
         if (player.repeatMode != Player.REPEAT_MODE_OFF) return
         val left = player.mediaItemCount - 1 - player.currentMediaItemIndex
         if (left > 2 || radioJob?.isActive == true) return
+        launchRadio()
+    }
+
+    private fun launchRadio() {
+        if (radioJob?.isActive == true) return
         val seed = player.currentMediaItem?.mediaId ?: return
 
         radioJob = scope.launch {
@@ -194,7 +292,12 @@ class PlaybackService : MediaSessionService() {
                 val radio = runCatching { Yt.radio(seed) }.getOrDefault(emptyList())
                 Recommender.filterForQueue(db, radio, queued).take(15)
             }
-            if (add.isNotEmpty()) player.addMediaItems(add.map(MediaItems::of))
+            if (add.isNotEmpty()) {
+                player.addMediaItems(add.map(MediaItems::of))
+                if (player.playbackState == Player.STATE_ENDED) {
+                    player.seekToNextMediaItem(); player.prepare(); player.play()
+                }
+            }
         }
     }
 }

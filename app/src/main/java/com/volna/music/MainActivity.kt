@@ -70,4 +70,11 @@ class MainActivity : ComponentActivity() {
         setContent { VolnaApp() }
         Diag.mark(this, "activity:content set")
     }
+
+    override fun onResume() {
+        super.onResume()
+        if (uiStarted) runCatching {
+            androidx.lifecycle.ViewModelProvider(this)[com.volna.music.ui.MainVm::class.java].refreshBatteryHint()
+        }
+    }
 }

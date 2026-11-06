@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.History
@@ -102,6 +103,11 @@ private fun HomeList(vm: MainVm, onArtist: (String) -> Unit, theme: AppTheme, on
                         }
                         androidx.compose.material3.HorizontalDivider()
                         androidx.compose.material3.DropdownMenuItem(
+                            text = { Text("Работа в фоне без ограничений") },
+                            leadingIcon = { Icon(Icons.Filled.BatteryChargingFull, null) },
+                            onClick = { themeMenu = false; vm.requestNoBatteryLimits() },
+                        )
+                        androidx.compose.material3.DropdownMenuItem(
                             text = { Text("Проверить обновления") },
                             leadingIcon = { Icon(Icons.Filled.SystemUpdate, null) },
                             onClick = { themeMenu = false; vm.checkUpdate(manual = true) },
@@ -110,6 +116,29 @@ private fun HomeList(vm: MainVm, onArtist: (String) -> Unit, theme: AppTheme, on
                 }
                 IconButton(onClick = vm::refreshHome, enabled = !vm.homeLoading) {
                     Icon(Icons.Filled.Refresh, "Обновить")
+                }
+            }
+        }
+
+        if (vm.batteryHint) {
+            item {
+                androidx.compose.material3.Card(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Чтобы музыка не останавливалась в фоне", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "Телефон может «усыплять» «Волну» через полчаса. Разрешите ей работать без ограничений батареи.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = vm::requestNoBatteryLimits) { Text("Разрешить") }
+                            TextButton(onClick = vm::closeBatteryHint) { Text("Не сейчас") }
+                        }
+                    }
                 }
             }
         }
