@@ -1,0 +1,173 @@
+== устройство: Android SDK built for x86 Android 8.1.0
+Success
+[скрин] 01_home
+[тап] Поиск -> 539 1731
+[тап] @edit -> 540 178
+[скрин] 02_search
+[тап] первый результат y=379
+[скрин] 03_playing
+[плеер через 25с] state=PlaybackState {state=7, position=0
+[плеер через 40с] state=PlaybackState {state=7, position=0
+[тап] мини-плеер
+[скрин] 04_full_player
+[НЕ НАЙДЕНО] Очередь
+[скрин] 05_queue
+[тап] Следующий -> 985 1500
+[скрин] 06_next_track
+[после «следующий»] state=PlaybackState {state=7, position=0
+[НЕ НАЙДЕНО] Свернуть
+[в фоне 15с] state=PlaybackState {state=7, position=0
+[скрин] 07_notification
+[тап] Главная -> 173 1731
+[НЕ НАЙДЕНО] Обновить
+[скрин] 08_home_after
+[тап] Библиотека -> 907 1731
+[НЕ НАЙДЕНО] История
+[скрин] 09_history
+[НЕ НАЙДЕНО] YouTube
+[скрин] 10_youtube_tab
+[НЕ НАЙДЕНО] Войти через Google
+[скрин] 11_google_login
+[тап] Главная -> 173 1731
+[тап] мини-плеер
+[скрин] 12_player_dark
+[скрин] 13_after_swipe
+[тап] Оформление -> 880 168
+[тап] Синяя -> 421 441
+[скрин] 14_home_blue
+[тап] мини-плеер
+[скрин] 15_player_blue
+[тап] Оформление -> 880 168
+[тап] Изумрудная -> 472 567
+[скрин] 16_home_emerald
+[тап] мини-плеер
+[скрин] 17_player_emerald
+[тап] Оформление -> 880 168
+[тап] Тёмная -> 432 315
+[скрин] 18_pull_refresh
+[тап] мини-плеер
+[скрин] 19_player_open
+[скрин] 20_after_swipe_down
+[плеер свернулся свайпом]
+== вылеты:
+11-06 06:06:40.495  4232  4232 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-06 06:06:40.518  1756  4248 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_CHANGED [CONTEXT service_id=17 ]
+11-06 06:06:40.523  1756  4248 I Fitness : OnPackageChangedOperation got intent: Intent { act=android.intent.action.PACKAGE_CHANGED dat=package:com.google.android.googlequicksearchbox flg=0x45000010 cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) } [CONTEXT service_id=17 ]
+11-06 06:06:40.524  1616  1633 D AutofillUI: destroySaveUiUiThread(): already destroyed
+11-06 06:06:40.536  1616  1631 D AutofillManagerServiceImpl: Set component for user 0 as ServiceInfo{f2aac62 com.google.android.gms.autofill.service.AutofillService}
+11-06 06:06:40.550  1756  4250 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_CHANGED [CONTEXT service_id=17 ]
+11-06 06:06:40.550  1756  4248 I Fitness : OnPackageChangedOperation got intent: Intent { act=android.intent.action.PACKAGE_CHANGED dat=package:com.google.android.apps.maps flg=0x5000010 cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) } [CONTEXT service_id=17 ]
+11-06 06:06:40.564  4227  4227 E Gmail   : ExperimentSnapshot: Failed to fetch updated remote config
+11-06 06:06:40.586  1616  2117 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.volna.music flg=0x4000010 (has extras) } to com.google.android.gms/.games.chimera.GamesSystemBroadcastReceiverProxy
+11-06 06:06:40.587  1616  1632 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.volna.music flg=0x4000010 (has extras) } to com.google.android.gms/.gass.chimera.PackageChangeBroadcastReceiver
+11-06 06:06:40.587  1616  1632 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.volna.music flg=0x4000010 (has extras) } to com.google.android.gms/.chimera.GmsIntentOperationService$PersistentTrustedReceiver
+11-06 06:06:40.587  1616  1632 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.volna.music flg=0x4000010 (has extras) } to com.google.android.googlequicksearchbox/com.google.android.apps.gsa.googlequicksearchbox.GelStubAppWatcher
+11-06 06:06:40.613  1756  4278 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_CHANGED [CONTEXT service_id=17 ]
+11-06 06:06:40.614  1756  4278 I Fitness : OnPackageChangedOperation got intent: Intent { act=android.intent.action.PACKAGE_CHANGED dat=package:com.google.android.apps.messaging flg=0x45000010 cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) } [CONTEXT service_id=17 ]
+11-06 06:06:40.614  1756  4135 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_CHANGED [CONTEXT service_id=17 ]
+11-06 06:06:40.620  1616  1910 W ActivityManager: Unable to start service Intent { cmp=com.google.android.gm.exchange/com.android.exchange.service.EasService } U=0: not found
+--
+11-06 06:06:40.764  4232  4232 D AndroidRuntime: Calling main entry com.android.commands.pm.Pm
+11-06 06:06:40.774  4232  4232 I app_process: System.exit called, status: 1
+11-06 06:06:40.774  4232  4232 I AndroidRuntime: VM exiting with result code 1.
+11-06 06:06:40.821  4227  4264 W zygote  : Long monitor contention with owner AsyncTask #2 (4259) at long android.database.sqlite.SQLiteConnection.nativePrepareStatement(long, java.lang.String)(SQLiteConnection.java:-2) waiters=0 in android.database.sqlite.SQLiteDatabase com.android.email.provider.EmailProvider.a(android.content.Context) for 474ms
+11-06 06:06:40.828  1616  2117 W ActivityManager: Unable to start service Intent { cmp=com.google.android.gm/com.android.email.service.AttachmentService } U=0: not found
+11-06 06:06:40.832  1756  4278 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_CHANGED [CONTEXT service_id=17 ]
+11-06 06:06:40.838  1756  4278 I Fitness : OnPackageChangedOperation got intent: Intent { act=android.intent.action.PACKAGE_CHANGED dat=package:com.google.android.gm flg=0x45000010 cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) } [CONTEXT service_id=17 ]
+11-06 06:06:40.841  1616  1631 W ResourceType: No known package when getting value for resource number 0x7f020137
+11-06 06:06:40.841  1616  1631 W ResourceType: No known package when getting value for resource number 0x7f12037f
+11-06 06:06:40.841  1616  1631 W ResourceType: No known package when getting value for resource number 0x7f12037f
+11-06 06:06:40.841  1616  1631 W ResourceType: No known package when getting value for resource number 0x7f12037e
+11-06 06:06:40.867  1616  4188 W ActivityManager: Unable to start service Intent { cmp=com.google.android.gm.exchange/com.android.exchange.service.EasService } U=0: not found
+11-06 06:06:40.904  1616  3312 I ActivityManager: START u0 {flg=0x10000000 cmp=com.volna.music/.MainActivity} from uid 2000
+11-06 06:06:40.929  1616  1681 W System  : ClassLoader referenced unknown path: 
+11-06 06:06:40.938  1616  1626 I zygote  : Background concurrent copying GC freed 107195(6MB) AllocSpace objects, 25(1208KB) LOS objects, 38% free, 9MB/15MB, paused 1.094ms total 117.479ms
+11-06 06:06:40.949  1616  3312 I ActivityManager: Start proc 4305:com.volna.music/u0a79 for activity com.volna.music/.MainActivity
+11-06 06:06:40.956  1616  1631 D AutofillManagerServiceImpl: Set component for user 0 as ServiceInfo{93ea75c com.google.android.gms.autofill.service.AutofillService}
+11-06 06:06:40.957  1616  1633 D AutofillUI: destroySaveUiUiThread(): already destroyed
+--
+11-06 06:07:11.769  4528  4528 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+11-06 06:07:11.771  4528  4528 I app_process: RelocateImage: /system/bin/patchoat --input-image-location=/system/framework/boot.art --output-image-file=/data/local/tmp/dalvik-cache/x86/system@framework@boot.art --instruction-set=x86 --base-offset-delta=16191488
+11-06 06:07:11.779  1756  4430 I Auth    : [AuthManaged,PasswordComplexityHelperImpl] Updating password complexity components state.
+11-06 06:07:11.779  1756  4430 I Auth    : [AuthManaged,PasswordComplexityHelperImpl] Disabling com.google.android.gms.auth.managed.admin.DeviceAdminReceiver
+11-06 06:07:11.780  2125  4480 I ChromeSync: [Sync,SyncIntentOperation] Handling the intent: Intent { act=com.google.android.gms.phenotype.COMMITTED flg=0x10 pkg=com.google.android.gms cmp=com.google.android.gms/.chimera.GmsIntentOperationService (has extras) }.
+11-06 06:07:11.780  2125  4481 I MdiSyncModule: flag handling is skipping irrelevant intent.
+11-06 06:07:11.780  2125  4468 W ModuleInitIntentOp: Dropping unexpected action com.google.android.gms.phenotype.COMMITTED
+11-06 06:07:11.787  1756  4430 I Auth    : [AuthManaged,PasswordComplexityHelperImpl] Disabling com.google.android.gms.auth.managed.ui.SetNewPasswordActivity
+11-06 06:07:11.788  1756  4428 I PTCommittedOperation: Receive new configuration for com.google.android.gms.car
+11-06 06:07:11.937  1756  4459 I Auth    : [AuthManaged,PasswordComplexityHelperImpl] Updating password complexity components state.
+11-06 06:07:11.937  1756  4459 I Auth    : [AuthManaged,PasswordComplexityHelperImpl] Disabling com.google.android.gms.auth.managed.admin.DeviceAdminReceiver
+11-06 06:07:11.937  1756  4459 I Auth    : [AuthManaged,PasswordComplexityHelperImpl] Disabling com.google.android.gms.auth.managed.ui.SetNewPasswordActivity
+11-06 06:07:11.942  2125  4458 I ChromeSync: [Sync,SyncIntentOperation] Handling the intent: Intent { act=com.google.android.gms.phenotype.COMMITTED flg=0x10 pkg=com.google.android.gms cmp=com.google.android.gms/.chimera.GmsIntentOperationService (has extras) }.
+11-06 06:07:11.944  2125  4480 I MdiSyncModule: flag handling is skipping irrelevant intent.
+11-06 06:07:11.946  2125  4481 W ModuleInitIntentOp: Dropping unexpected action com.google.android.gms.phenotype.COMMITTED
+11-06 06:07:11.952  1756  4430 I PTCommittedOperation: Receive new configuration for com.google.android.gms.gcm
+--
+11-06 06:07:12.054  4528  4528 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+11-06 06:07:12.117  1756  4428 I Auth    : [AuthManaged,PasswordComplexityHelperImpl] Updating password complexity components state.
+11-06 06:07:12.117  1756  4428 I Auth    : [AuthManaged,PasswordComplexityHelperImpl] Disabling com.google.android.gms.auth.managed.admin.DeviceAdminReceiver
+11-06 06:07:12.119  2125  4480 I ChromeSync: [Sync,SyncIntentOperation] Handling the intent: Intent { act=com.google.android.gms.phenotype.COMMITTED flg=0x10 pkg=com.google.android.gms cmp=com.google.android.gms/.chimera.GmsIntentOperationService (has extras) }.
+11-06 06:07:12.119  2125  4489 I MdiSyncModule: flag handling is skipping irrelevant intent.
+11-06 06:07:12.122  2125  4487 W ModuleInitIntentOp: Dropping unexpected action com.google.android.gms.phenotype.COMMITTED
+11-06 06:07:12.125  1756  4428 I Auth    : [AuthManaged,PasswordComplexityHelperImpl] Disabling com.google.android.gms.auth.managed.ui.SetNewPasswordActivity
+== ошибки приложения:
+11-06 06:06:39.227  2928  2928 W dex2oat : Method processed more than once: void org.schabi.newpipe.extractor.downloader.Downloader.<init>()
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.get(java.lang.String)
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.get(java.lang.String, java.util.Map)
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.get(java.lang.String, java.util.Map, org.schabi.newpipe.extractor.localization.Localization)
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.get(java.lang.String, org.schabi.newpipe.extractor.localization.Localization)
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.head(java.lang.String)
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.head(java.lang.String, java.util.Map)
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.post(java.lang.String, java.util.Map, byte[])
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.post(java.lang.String, java.util.Map, byte[], org.schabi.newpipe.extractor.localization.Localization)
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.postWithContentType(java.lang.String, java.util.Map, byte[], java.lang.String)
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.postWithContentType(java.lang.String, java.util.Map, byte[], org.schabi.newpipe.extractor.localization.Localization, java.lang.String)
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.postWithContentTypeJson(java.lang.String, java.util.Map, byte[])
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: org.schabi.newpipe.extractor.downloader.Response org.schabi.newpipe.extractor.downloader.Downloader.postWithContentTypeJson(java.lang.String, java.util.Map, byte[], org.schabi.newpipe.extractor.localization.Localization)
+11-06 06:06:39.228  2928  2928 W dex2oat : Method processed more than once: java.lang.String org.schabi.newpipe.extractor.downloader.Downloader.toString()
+11-06 06:06:40.586  1616  2117 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.volna.music flg=0x4000010 (has extras) } to com.google.android.gms/.games.chimera.GamesSystemBroadcastReceiverProxy
+11-06 06:06:40.587  1616  1632 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.volna.music flg=0x4000010 (has extras) } to com.google.android.gms/.gass.chimera.PackageChangeBroadcastReceiver
+11-06 06:06:40.587  1616  1632 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.volna.music flg=0x4000010 (has extras) } to com.google.android.gms/.chimera.GmsIntentOperationService$PersistentTrustedReceiver
+11-06 06:06:40.587  1616  1632 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.volna.music flg=0x4000010 (has extras) } to com.google.android.googlequicksearchbox/com.google.android.apps.gsa.googlequicksearchbox.GelStubAppWatcher
+11-06 06:06:41.573  1756  4135 W GCM     : Unexpected forwarded intent: Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.volna.music flg=0x4000010 cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) }
+11-06 06:06:41.574  1756  4248 W GCM     : Unexpected forwarded intent: Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.volna.music flg=0x4000010 cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) }
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal: Playback error
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:   androidx.media3.exoplayer.ExoPlaybackException: Source error
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleIoException(ExoPlayerImplInternal.java:737)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:713)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at android.os.Handler.dispatchMessage(Handler.java:102)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at android.os.Looper.loop(Looper.java:164)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at android.os.HandlerThread.run(HandlerThread.java:65)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:   Caused by: java.io.IOException: Не удалось получить поток: YouTube probably temporarily blocked anonymous watch access with this IP , got error LOGIN_REQUIRED: "Sign in to confirm that you're not a bot"
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at com.volna.music.player.StreamResolver.urlFor(StreamResolver.kt:45)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at com.volna.music.player.StreamResolver.resolveDataSpec(StreamResolver.kt:31)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.datasource.ResolvingDataSource.open(ResolvingDataSource.java:108)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.datasource.TeeDataSource.open(TeeDataSource.java:54)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.datasource.cache.CacheDataSource.openNextSource(CacheDataSource.java:802)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.datasource.cache.CacheDataSource.open(CacheDataSource.java:615)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.datasource.StatsDataSource.open(StatsDataSource.java:87)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.source.ProgressiveMediaPeriod$ExtractingLoadable.load(ProgressiveMediaPeriod.java:1085)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.upstream.Loader$LoadTask.run(Loader.java:450)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1162)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:636)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at java.lang.Thread.run(Thread.java:764)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:   Caused by: org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException: YouTube probably temporarily blocked anonymous watch access with this IP , got error LOGIN_REQUIRED: "Sign in to confirm that you're not a bot"
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.checkPlayabilityStatus(YoutubeStreamExtractor.java:895)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.fetchVisionOsClient(YoutubeStreamExtractor.java:938)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.onFetchPage(YoutubeStreamExtractor.java:834)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at org.schabi.newpipe.extractor.Extractor.fetchPage(Extractor.java:65)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:95)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:89)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at com.volna.music.data.Yt.resolveAudioUrl(Yt.kt:79)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       at com.volna.music.player.StreamResolver.urlFor(StreamResolver.kt:43)
+11-06 06:07:47.774  4305  4355 E ExoPlayerImplInternal:       ... 11 more
+11-06 06:08:06.215  4305  4355 E ExoPlayerImplInternal: Playback error
+11-06 06:08:06.215  4305  4355 E ExoPlayerImplInternal:   androidx.media3.exoplayer.ExoPlaybackException: Source error
+11-06 06:08:06.215  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleIoException(ExoPlayerImplInternal.java:737)
+11-06 06:08:06.215  4305  4355 E ExoPlayerImplInternal:       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:713)
+11-06 06:08:06.215  4305  4355 E ExoPlayerImplInternal:       at android.os.Handler.dispatchMessage(Handler.java:102)
+11-06 06:08:06.215  4305  4355 E ExoPlayerImplInternal:       at android.os.Looper.loop(Looper.java:164)
+11-06 06:08:06.215  4305  4355 E ExoPlayerImplInternal:       at android.os.HandlerThread.run(HandlerThread.java:65)
+11-06 06:08:06.215  4305  4355 E ExoPlayerImplInternal:   Caused by: java.io.IOException: Не удалось получить поток: YouTube probably temporarily blocked anonymous watch access with this IP , got error LOGIN_REQUIRED: "Sign in to confirm that you're not a bot"
+11-06 06:08:06.215  4305  4355 E ExoPlayerImplInternal:       at com.volna.music.player.StreamResolver.urlFor(StreamResolver.kt:45)
+11-06 06:08:06.215  4305  4355 E ExoPlayerImplInternal:       at com.volna.music.player.StreamResolver.resolveDataSpec(StreamResolver.kt:31)
