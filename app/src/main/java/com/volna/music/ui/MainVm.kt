@@ -84,8 +84,16 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     var update by mutableStateOf<UpdateInfo?>(null); private set
     var updateProgress by mutableStateOf<Float?>(null); private set
 
+    private var lastUpdateCheck = 0L
+
+    /** При возвращении в приложение; не чаще раза в полчаса. */
+    fun checkUpdateOnResume() {
+        if (System.currentTimeMillis() - lastUpdateCheck > 30 * 60_000L) checkUpdate()
+    }
+
     /** [manual] — пользователь сам нажал «Проверить обновления»: тогда говорим и «обновлений нет». */
     fun checkUpdate(manual: Boolean = false) {
+        lastUpdateCheck = System.currentTimeMillis()
         val ctx = getApplication<Application>()
         viewModelScope.launch {
             try {

@@ -74,7 +74,9 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (uiStarted) runCatching {
-            androidx.lifecycle.ViewModelProvider(this)[com.volna.music.ui.MainVm::class.java].refreshBatteryHint()
+            val vm = androidx.lifecycle.ViewModelProvider(this)[com.volna.music.ui.MainVm::class.java]
+            vm.refreshBatteryHint()
+            vm.checkUpdateOnResume()
         }
     }
 }
