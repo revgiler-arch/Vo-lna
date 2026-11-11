@@ -47,6 +47,8 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
@@ -91,7 +93,8 @@ fun VolnaApp() {
         var tab by rememberSaveable { mutableIntStateOf(0) }
         var playerOpen by rememberSaveable { mutableStateOf(false) }
 
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Box(Modifier.fillMaxSize()) {
+            AppBackdrop(Modifier.matchParentSize())
             Scaffold(
                 bottomBar = {
                     Column {
@@ -226,6 +229,8 @@ private fun FullPlayer(vm: MainVm, onClose: () -> Unit) {
         Modifier.fillMaxSize().graphicsLayer { translationY = dragY.value },
         color = MaterialTheme.colorScheme.background,
     ) {
+      Box(Modifier.fillMaxSize()) {
+        AppBackdrop(Modifier.matchParentSize())
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             Row(
                 Modifier.fillMaxWidth().padding(4.dp).pointerInput(Unit) {
@@ -245,6 +250,13 @@ private fun FullPlayer(vm: MainVm, onClose: () -> Unit) {
                     Modifier.weight(1f), textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleSmall,
                 )
+                IconButton(onClick = vm::toggleVideo, modifier = Modifier.size(56.dp)) {
+                    Icon(
+                        if (vm.videoOn) Icons.Filled.Videocam else Icons.Filled.VideocamOff,
+                        if (vm.videoOn) "Выключить видео" else "Включить видео", Modifier.size(28.dp),
+                        tint = if (vm.videoOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
                 IconButton(onClick = { showQueue = !showQueue }, modifier = Modifier.size(56.dp)) {
                     Icon(
                         Icons.AutoMirrored.Filled.QueueMusic, "Очередь", Modifier.size(28.dp),
@@ -257,6 +269,7 @@ private fun FullPlayer(vm: MainVm, onClose: () -> Unit) {
                 if (showQueue) {
                     QueueList(vm)
                 } else {
+                    VideoVisibility(vm)
                     SwipeArtwork(vm, t.thumb, onDownDrag, onDownEnd)
                 }
             }
@@ -343,6 +356,27 @@ private fun FullPlayer(vm: MainVm, onClose: () -> Unit) {
                 }
             }
         }
+      }
+    }
+}
+
+/** Видео грузится, только пока экран плеера на виду и приложение открыто. */
+@Composable
+private fun VideoVisibility(vm: MainVm) {
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            when (e) {
+                androidx.lifecycle.Lifecycle.Event.ON_START -> vm.setVideoVisible(true)
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> vm.setVideoVisible(false)
+                else -> Unit
+            }
+        }
+        owner.lifecycle.addObserver(obs)
+        onDispose {
+            owner.lifecycle.removeObserver(obs)
+            vm.setVideoVisible(false)
+        }
     }
 }
 
@@ -384,19 +418,60 @@ private fun SwipeArtwork(vm: MainVm, thumb: String?, onDownDrag: (Float) -> Unit
             },
         contentAlignment = Alignment.Center,
     ) {
-        AsyncImage(
-            model = thumb,
-            contentDescription = "Обложка — смахните влево или вправо, чтобы переключить трек",
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f)
-                .graphicsLayer {
-                    translationX = offset.value
-                    rotationZ = offset.value / 60f
-                    alpha = 1f - (kotlin.math.abs(offset.value) / (threshold * 4)).coerceIn(0f, 0.5f)
+        val swipe = Modifier.graphicsLayer {
+            translationX = offset.value
+            rotationZ = offset.value / 60f
+            alpha = 1f - (kotlin.math.abs(offset.value) / (threshold * 4)).coerceIn(0f, 0.5f)
+        }
+        val v = vm.video
+        val videoPlayer = v.player
+        if (vm.videoOn && videoPlayer != null) {
+            // окно видео по пропорциям кадра, вписанное в место обложки, — не на весь экран
+            Box(
+                swipe.aspectRatio(v.aspect).clip(RoundedCornerShape(16.dp)).background(Color.Black),
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.ui.viewinterop.AndroidView(
+                    factory = { android.view.TextureView(it) },
+                    update = { tv -> videoPlayer.setVideoTextureView(tv) },
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (v.status != com.volna.music.player.VideoPreview.Status.READY) {
+                    AsyncImage(
+                        model = thumb, contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    CircularProgressIndicator(Modifier.size(36.dp), color = Color.White)
                 }
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        )
+            }
+        } else {
+            Box(contentAlignment = Alignment.BottomCenter) {
+                AsyncImage(
+                    model = thumb,
+                    contentDescription = "Обложка — смахните влево или вправо, чтобы переключить трек",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = swipe.fillMaxWidth().aspectRatio(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                )
+                if (vm.videoOn) {
+                    val note = when (v.status) {
+                        com.volna.music.player.VideoPreview.Status.NONE -> "У этого трека нет видео"
+                        com.volna.music.player.VideoPreview.Status.LOADING -> "Загружаем видео…"
+                        else -> null
+                    }
+                    if (note != null) {
+                        Text(
+                            note,
+                            Modifier.padding(12.dp).clip(RoundedCornerShape(8.dp))
+                                .background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 10.dp, vertical = 4.dp),
+                            color = Color.White, style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

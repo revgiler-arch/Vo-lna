@@ -12,6 +12,11 @@ import org.schabi.newpipe.extractor.stream.DeliveryMethod
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.stream.StreamType
+import org.schabi.newpipe.extractor.stream.VideoStream
+import org.schabi.newpipe.extractor.MediaFormat
+import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 
 /** Всё общение с YouTube / YouTube Music. */
 object Yt {
@@ -74,9 +79,72 @@ object Yt {
         list.filter { it.id != id }.distinctBy { it.id }
     }
 
+    // Звук и видео одного трека берутся из одного ответа YouTube — не запрашиваем его дважды.
+    private class CachedInfo(val info: StreamInfo, val at: Long)
+    private val infoCache = java.util.concurrent.ConcurrentHashMap<String, CachedInfo>()
+    private const val INFO_TTL = 2 * 3_600_000L
+
+    private fun streamInfo(id: String): StreamInfo {
+        infoCache[id]?.let { if (System.currentTimeMillis() - it.at < INFO_TTL) return it.info }
+        val info = StreamInfo.getInfo(yt, watchUrl(id))
+        if (infoCache.size > 50) infoCache.clear()
+        infoCache[id] = CachedInfo(info, System.currentTimeMillis())
+        return info
+    }
+
+    /** Ссылки протухли или не играют — в следующий раз спросим YouTube заново. */
+    fun forget(id: String) {
+        infoCache.remove(id)
+    }
+
+    /**
+     * Ссылка на видео к треку (без звука — звук играет основной плеер) или null, если видео нет.
+     * Берём MP4 (H.264) не выше 480p: его тянет любое устройство, включая магнитолу. Блокирующий вызов.
+     */
+    fun resolveVideoUrl(id: String): String? {
+        val info = streamInfo(id)
+        fun VideoStream.h(): Int = height.takeIf { it > 0 }
+            ?: resolution.takeWhile { it.isDigit() }.toIntOrNull() ?: 0
+        val only = info.videoOnlyStreams.filter {
+            it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.h() in 1..480
+        }
+        val pick = only.filter { it.format == MediaFormat.MPEG_4 }.maxByOrNull { it.h() }
+            ?: info.videoStreams.filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP }
+                .minByOrNull { kotlin.math.abs(it.h() - 360) }
+            ?: only.maxByOrNull { it.h() }
+        return pick?.content
+    }
+
+    /**
+     * Треки для радио под занятие и настроение: ищем подходящие плейлисты YouTube Music
+     * (их собирают люди под «спокойное перед сном», «бодрое для тренировки» и т.п.).
+     */
+    suspend fun moodTracks(queries: List<String>): List<Track> = withContext(Dispatchers.IO) {
+        kotlinx.coroutines.coroutineScope {
+            queries.map { q ->
+                async {
+                    val playlists = runCatching {
+                        val qh = yt.searchQHFactory.fromQuery(
+                            q, listOf(YoutubeSearchQueryHandlerFactory.MUSIC_PLAYLISTS), "",
+                        )
+                        SearchInfo.getInfo(yt, qh).relatedItems.filterIsInstance<PlaylistInfoItem>().take(2)
+                    }.getOrDefault(emptyList())
+                    val fromPlaylists = playlists.map { p ->
+                        async {
+                            runCatching {
+                                PlaylistInfo.getInfo(yt, p.url).relatedItems.mapNotNull(::toTrack).take(40)
+                            }.getOrDefault(emptyList())
+                        }
+                    }.awaitAll().flatten()
+                    fromPlaylists.ifEmpty { runCatching { searchSongs(q) }.getOrDefault(emptyList()) }
+                }
+            }.awaitAll()
+        }.flatten().distinctBy { it.id }
+    }
+
     /** Прямая ссылка на лучший аудиопоток. Блокирующий вызов. */
     fun resolveAudioUrl(id: String): String {
-        val info = StreamInfo.getInfo(yt, watchUrl(id))
+        val info = streamInfo(id)
         val candidates = info.audioStreams.filter {
             it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP &&
                 (it.audioTrackType == null || it.audioTrackType == AudioTrackType.ORIGINAL)

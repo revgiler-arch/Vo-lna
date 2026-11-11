@@ -7,13 +7,79 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 
 /** Оформления приложения. Во всех — белые буквы на насыщенном фоне (лучше читается, в том числе в машине). */
 enum class AppTheme(val title: String) {
     DARK("Тёмная"),
     BLUE("Синяя"),
     EMERALD("Изумрудная"),
+    RGB("RGB — переливается"),
 }
+
+/**
+ * Для темы RGB — текущий оттенок 0..360, плавно бегущий по кругу, как у RGB-ленты.
+ * Фон читает его только при рисовании, поэтому перелив не пересобирает экран каждый кадр.
+ */
+val LocalRgbHue = staticCompositionLocalOf<State<Float>?> { null }
+
+/** Фон приложения: обычный цвет темы или переливающийся градиент RGB. */
+fun Modifier.appBackground(): Modifier = composed {
+    val hue = LocalRgbHue.current
+    if (hue == null) {
+        background(MaterialTheme.colorScheme.background)
+    } else {
+        graphicsLayer {}.drawBehind {
+            val h = hue.value
+            drawRect(
+                Brush.linearGradient(
+                    listOf(
+                        Color.hsv(h % 360f, 0.85f, 0.55f),
+                        Color.hsv((h + 60f) % 360f, 0.85f, 0.42f),
+                        Color.hsv((h + 120f) % 360f, 0.85f, 0.30f),
+                    ),
+                    start = Offset.Zero,
+                    end = Offset(size.width, size.height),
+                ),
+            )
+        }
+    }
+}
+
+/** Отдельный слой с фоном: кладётся под содержимое, чтобы перелив перерисовывал только себя. */
+@Composable
+fun AppBackdrop(modifier: Modifier = Modifier) {
+    androidx.compose.foundation.layout.Box(modifier.appBackground())
+}
+
+/** Цвета элементов в теме RGB: подстраиваются под текущий оттенок (меняются шагами, это дёшево). */
+private fun rgbScheme(h: Float) = darkColorScheme(
+    primary = Color.hsv(h % 360f, 0.45f, 1f), onPrimary = Color(0xFF101014),
+    primaryContainer = Color.hsv(h % 360f, 0.7f, 0.45f), onPrimaryContainer = Color.White,
+    secondary = Color.hsv((h + 60f) % 360f, 0.45f, 1f),
+    secondaryContainer = Color.hsv((h + 60f) % 360f, 0.7f, 0.4f), onSecondaryContainer = Color.White,
+    background = Color.Transparent, onBackground = Color.White,
+    surface = Color.Transparent, onSurface = Color.White,
+    surfaceVariant = Color(0x33FFFFFF), onSurfaceVariant = Color(0xFFE6E6EE),
+    surfaceContainer = Color(0xFF15151C), surfaceContainerHigh = Color(0xFF1C1C24),
+    surfaceContainerHighest = Color(0xFF26262E),
+    outline = Color(0xFFB0B0C0),
+)
 
 /** Цвет иконок и текста на белой панели управления плеером. */
 val LocalPanelInk = staticCompositionLocalOf { Color(0xFF101014) }
@@ -69,10 +135,24 @@ private val EmeraldScheme = darkColorScheme(
 
 @Composable
 fun VolnaTheme(theme: AppTheme, content: @Composable () -> Unit) {
+    if (theme == AppTheme.RGB) {
+        val hue = rememberInfiniteTransition(label = "rgb").animateFloat(
+            initialValue = 0f, targetValue = 360f,
+            animationSpec = infiniteRepeatable(tween(durationMillis = 24_000, easing = LinearEasing)),
+            label = "hue",
+        )
+        // кнопки и акценты меняют цвет шагами по 6°: глазу плавно, а экран пересобирается редко
+        val step by remember { derivedStateOf { (hue.value / 6f).toInt() * 6f } }
+        CompositionLocalProvider(LocalPanelInk provides Color(0xFF101014), LocalRgbHue provides hue) {
+            MaterialTheme(colorScheme = rgbScheme(step), content = content)
+        }
+        return
+    }
     val (scheme, ink) = when (theme) {
         AppTheme.DARK -> DarkScheme to Color(0xFF101014)
         AppTheme.BLUE -> BlueScheme to Color(0xFF1B34B8)
         AppTheme.EMERALD -> EmeraldScheme to Color(0xFF0C5C46)
+        AppTheme.RGB -> DarkScheme to Color(0xFF101014)
     }
     CompositionLocalProvider(LocalPanelInk provides ink) {
         MaterialTheme(colorScheme = scheme, content = content)

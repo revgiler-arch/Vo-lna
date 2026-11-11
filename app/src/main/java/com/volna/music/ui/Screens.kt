@@ -31,6 +31,12 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Radio
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.foundation.layout.size
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -95,6 +101,7 @@ private fun HomeList(vm: MainVm, onArtist: (String) -> Unit, theme: AppTheme, on
                                             AppTheme.DARK -> androidx.compose.ui.graphics.Color(0xFF26262D)
                                             AppTheme.BLUE -> androidx.compose.ui.graphics.Color(0xFF3D5AFE)
                                             AppTheme.EMERALD -> androidx.compose.ui.graphics.Color(0xFF12A37A)
+                                            AppTheme.RGB -> androidx.compose.ui.graphics.Color(0xFFFF2D95)
                                         },
                                     )
                                 },
@@ -171,29 +178,27 @@ private fun HomeList(vm: MainVm, onArtist: (String) -> Unit, theme: AppTheme, on
             }
         }
 
-        if (vm.recent.isNotEmpty()) {
-            item { SectionTitle("Недавно слушали") }
+        if (vm.recent.isNotEmpty() && vm.picks.isNotEmpty()) {
+            item { SectionTitle("Рекомендуем") }
+            item {
+                Text(
+                    "Новое у исполнителей, которых вы слушаете",
+                    Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    itemsIndexed(vm.recent) { i, t -> RecentCard(t) { vm.play(vm.recent, i) } }
+                    itemsIndexed(vm.picks, key = { _, t -> "pk" + t.id }) { i, t -> RecentCard(t) { vm.play(vm.picks, i) } }
                 }
             }
         }
 
-        if (vm.ytHome.isNotEmpty()) {
-            item { SectionTitle("Из вашего YouTube Music") }
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    itemsIndexed(vm.ytHome) { i, t -> RecentCard(t) { vm.play(vm.ytHome, i) } }
-                }
-            }
-        }
+        item { RadioCard(vm) }
 
         if (vm.topArtists.isNotEmpty()) {
             item { SectionTitle("Ваши исполнители") }
@@ -241,6 +246,102 @@ private fun HomeList(vm: MainVm, onArtist: (String) -> Unit, theme: AppTheme, on
             }
         }
     }
+}
+
+// ============================== Радио ==============================
+
+/** Карточка «Радио»: по нажатию раскрывается меню — занятие и настроение. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun RadioCard(vm: MainVm) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    val scheme = MaterialTheme.colorScheme
+    androidx.compose.material3.Card(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = scheme.primaryContainer, contentColor = scheme.onPrimaryContainer,
+        ),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().clickable { open = !open }.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Filled.Radio, null, Modifier.size(36.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Радио", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(
+                    if (vm.radioActivity == null && vm.radioMood == null) "Под занятие и настроение"
+                    else com.volna.music.data.MoodRadio.title(vm.radioActivity, vm.radioMood),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            Icon(
+                if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                if (open) "Свернуть" else "Настроить", Modifier.size(32.dp),
+            )
+        }
+        AnimatedVisibility(visible = open) {
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                Text("Чем заняты", style = MaterialTheme.typography.titleSmall)
+                androidx.compose.foundation.layout.FlowRow(
+                    Modifier.padding(top = 6.dp, bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    com.volna.music.data.RadioActivity.entries.forEach { a ->
+                        RadioChip(a.title, vm.radioActivity == a) { vm.pickActivity(a) }
+                    }
+                }
+                Text("Настроение", style = MaterialTheme.typography.titleSmall)
+                androidx.compose.foundation.layout.FlowRow(
+                    Modifier.padding(top = 6.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    com.volna.music.data.RadioMood.entries.forEach { m ->
+                        RadioChip(m.title, vm.radioMood == m) { vm.pickMood(m) }
+                    }
+                }
+                Button(
+                    onClick = { vm.startMoodRadio(); open = false },
+                    enabled = !vm.radioLoading,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                ) {
+                    if (vm.radioLoading) {
+                        CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.width(6.dp))
+                        Text("Включить радио")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RadioChip(text: String, selected: Boolean, onClick: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val check: (@Composable () -> Unit)? = if (selected) {
+        { Icon(Icons.Filled.Check, null, Modifier.size(18.dp)) }
+    } else null
+    androidx.compose.material3.FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(text, Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.bodyLarge) },
+        leadingIcon = check,
+        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+            labelColor = scheme.onPrimaryContainer,
+            selectedContainerColor = scheme.primary,
+            selectedLabelColor = scheme.onPrimary,
+            selectedLeadingIconColor = scheme.onPrimary,
+        ),
+        border = androidx.compose.material3.FilterChipDefaults.filterChipBorder(
+            enabled = true, selected = selected,
+            borderColor = scheme.onPrimaryContainer.copy(alpha = 0.5f),
+        ),
+    )
 }
 
 @Composable

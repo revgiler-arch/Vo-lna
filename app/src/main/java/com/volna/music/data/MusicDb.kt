@@ -104,6 +104,11 @@ class MusicDb(context: Context) : SQLiteOpenHelper(context, "volna.db", null, 1)
             arrayOf((System.currentTimeMillis() - ms).toString()),
         ).use { c -> buildSet { while (c.moveToNext()) add(c.getString(0)) } }
 
+    /** id всех треков, которые когда-либо играли. */
+    fun heardIds(): Set<String> =
+        readableDatabase.rawQuery("SELECT DISTINCT vid FROM plays", null)
+            .use { c -> buildSet { while (c.moveToNext()) add(c.getString(0)) } }
+
     fun clearHistory() {
         writableDatabase.delete("plays", null, null)
         writableDatabase.delete("searches", null, null)

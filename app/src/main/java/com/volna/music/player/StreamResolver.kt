@@ -29,13 +29,16 @@ object StreamResolver : ResolvingDataSource.Resolver {
         if (uri.scheme != MediaItems.SCHEME) return dataSpec
         val id = uri.lastPathSegment ?: throw IOException("bad uri $uri")
         val url = urlFor(id)
-        val ua = if (YoutubeParsingHelper.isVisionOsStreamingUrl(url)) {
+        return dataSpec.withUri(Uri.parse(url)).withAdditionalHeaders(mapOf("User-Agent" to userAgentFor(url)))
+    }
+
+    /** Некоторые ссылки YouTube отдаёт только «своему» клиенту — подставляем нужный User-Agent. */
+    fun userAgentFor(url: String): String =
+        if (YoutubeParsingHelper.isVisionOsStreamingUrl(url)) {
             YoutubeParsingHelper.getVisionOsUserAgent(null)
         } else {
             OkDownloader.USER_AGENT
         }
-        return dataSpec.withUri(Uri.parse(url)).withAdditionalHeaders(mapOf("User-Agent" to ua))
-    }
 
     private fun urlFor(id: String): String {
         urls[id]?.let { if (System.currentTimeMillis() - it.at < TTL) return it.url }
@@ -50,6 +53,7 @@ object StreamResolver : ResolvingDataSource.Resolver {
 
     fun invalidate(id: String) {
         urls.remove(id)
+        Yt.forget(id)
     }
 }
 

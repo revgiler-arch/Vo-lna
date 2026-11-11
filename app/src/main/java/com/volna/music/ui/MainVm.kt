@@ -16,6 +16,11 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.volna.music.App
 import com.volna.music.data.Recommender
+import com.volna.music.data.MoodRadio
+import com.volna.music.data.Picks
+import com.volna.music.data.RadioActivity
+import com.volna.music.data.RadioMood
+import com.volna.music.player.VideoPreview
 import com.volna.music.data.Track
 import com.volna.music.data.Yt
 import com.volna.music.data.Updater
@@ -53,6 +58,8 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     // ---------- главная ----------
     var forYou by mutableStateOf<List<Track>>(emptyList()); private set
     var recent by mutableStateOf<List<Track>>(emptyList()); private set
+    /** «Рекомендуем»: новое у любимых исполнителей. */
+    var picks by mutableStateOf<List<Track>>(emptyList()); private set
     var topArtists by mutableStateOf<List<String>>(emptyList()); private set
     var homeLoading by mutableStateOf(false); private set
     var homeError by mutableStateOf<String?>(null); private set
@@ -129,6 +136,74 @@ class MainVm(app: Application) : AndroidViewModel(app) {
 
     // ---------- работа в фоне ----------
     private val uiPrefs = app.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE)
+
+    // ---------- радио под занятие и настроение ----------
+    var radioActivity by mutableStateOf(
+        runCatching { RadioActivity.valueOf(uiPrefs.getString("radio_activity", "") ?: "") }.getOrNull()
+    ); private set
+    var radioMood by mutableStateOf(
+        runCatching { RadioMood.valueOf(uiPrefs.getString("radio_mood", "") ?: "") }.getOrNull()
+    ); private set
+    var radioLoading by mutableStateOf(false); private set
+
+    /** Повторное нажатие на выбранное снимает выбор. */
+    fun pickActivity(a: RadioActivity) {
+        radioActivity = if (radioActivity == a) null else a
+        uiPrefs.edit().putString("radio_activity", radioActivity?.name).apply()
+    }
+
+    fun pickMood(m: RadioMood) {
+        radioMood = if (radioMood == m) null else m
+        uiPrefs.edit().putString("radio_mood", radioMood?.name).apply()
+    }
+
+    fun startMoodRadio() {
+        if (radioLoading) return
+        val a = radioActivity
+        val m = radioMood
+        radioLoading = true
+        viewModelScope.launch {
+            try {
+                val list = MoodRadio.tracks(db, a, m)
+                if (list.isEmpty()) toast("Не удалось собрать радио — попробуйте ещё раз")
+                else {
+                    play(list)
+                    toast("Радио: ${MoodRadio.title(a, m)}")
+                }
+            } catch (e: Exception) {
+                toast(describeError(e).substringBefore("\n\n"))
+            } finally {
+                radioLoading = false
+            }
+        }
+    }
+
+    // ---------- видео на экране плеера ----------
+    val video = VideoPreview(app, viewModelScope)
+    var videoOn by mutableStateOf(uiPrefs.getBoolean("video_on", false)); private set
+    private var videoVisible = false
+
+    fun toggleVideo() {
+        videoOn = !videoOn
+        uiPrefs.edit().putBoolean("video_on", videoOn).apply()
+        updateVideo()
+    }
+
+    /** Экран плеера (с обложкой) виден / скрыт: видео живёт только пока его видно. */
+    fun setVideoVisible(visible: Boolean) {
+        videoVisible = visible
+        updateVideo()
+    }
+
+    private fun updateVideo() {
+        val c = controller
+        val id = nowPlaying?.id
+        if (videoOn && videoVisible && c != null && id != null) {
+            video.show(id, c.currentPosition.coerceAtLeast(0), c.isPlaying)
+        } else {
+            video.release()
+        }
+    }
     var batteryHint by mutableStateOf(false); private set
 
     private fun ignoringBattery(): Boolean {
@@ -170,6 +245,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
                 controller?.let {
                     positionMs = it.currentPosition.coerceAtLeast(0)
                     if (it.duration > 0) durationMs = it.duration
+                    if (videoOn && videoVisible) video.sync(positionMs, it.isPlaying)
                 }
                 delay(500)
             }
@@ -210,6 +286,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
         shuffle = c.shuffleModeEnabled
         repeatMode = c.repeatMode
         if (changed) {
+            updateVideo()
             val id = current?.id
             viewModelScope.launch {
                 rating = if (id == null) 0 else withContext(Dispatchers.IO) { db.rating(id) }
@@ -219,6 +296,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        video.release()
         controllerFuture?.let { MediaController.releaseFuture(it) }
         super.onCleared()
     }
@@ -375,6 +453,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
                 recent = withContext(Dispatchers.IO) { db.recent(15) }
                 topArtists = withContext(Dispatchers.IO) { db.artistWeights(10).map { it.first } }
                 forYou = Recommender.forYou(db)
+                picks = runCatching { Picks.forYou(db, forYou) }.getOrDefault(forYou.take(15))
                 if (forYou.isEmpty()) homeError = "YouTube ничего не вернул. Нажмите «Повторить».\n\n[${Yt.lastDiagnostics ?: "-"}; ${java.util.Locale.getDefault()}; ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}, Android ${android.os.Build.VERSION.RELEASE}]"
             } catch (e: Exception) {
                 homeError = describeError(e)
