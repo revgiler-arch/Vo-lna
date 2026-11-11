@@ -12,8 +12,8 @@ android {
         applicationId = "com.volna.music"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "1.10.14"
+        versionCode = 15
+        versionName = "1.10.15"
     }
 
     // Один и тот же ключ для всех сборок: новая версия ставится поверх старой
@@ -73,7 +73,7 @@ android {
 
 dependencies {
     // Извлечение потоков YouTube / YouTube Music (та же версия, что у NewPipe)
-    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.27.0")
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.27.1")
     // _nio — расширенный набор: нужен для URLEncoder.encode(String, Charset) на Android 8
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
 
