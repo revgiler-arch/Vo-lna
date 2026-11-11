@@ -30,6 +30,7 @@ enum class AppTheme(val title: String) {
     BLUE("Синяя"),
     EMERALD("Изумрудная"),
     RGB("RGB — переливается"),
+    RGB_BEAT("RGB — под музыку"),
 }
 
 /**
@@ -38,20 +39,26 @@ enum class AppTheme(val title: String) {
  */
 val LocalRgbHue = staticCompositionLocalOf<State<Float>?> { null }
 
+/** Для темы «под музыку» — вспышка на ударе 0..1 (быстро гаснет). */
+val LocalRgbGlow = staticCompositionLocalOf<State<Float>?> { null }
+
 /** Фон приложения: обычный цвет темы или переливающийся градиент RGB. */
 fun Modifier.appBackground(): Modifier = composed {
     val hue = LocalRgbHue.current
+    val glow = LocalRgbGlow.current
     if (hue == null) {
         background(MaterialTheme.colorScheme.background)
     } else {
         graphicsLayer {}.drawBehind {
             val h = hue.value
+            val g = glow?.value ?: 0f
+            // на ударе фон вспыхивает ярче, как LED-лента в режиме «музыка»
             drawRect(
                 Brush.linearGradient(
                     listOf(
-                        Color.hsv(h % 360f, 0.85f, 0.55f),
-                        Color.hsv((h + 60f) % 360f, 0.85f, 0.42f),
-                        Color.hsv((h + 120f) % 360f, 0.85f, 0.30f),
+                        Color.hsv(h % 360f, 0.85f - 0.15f * g, (0.50f + 0.45f * g).coerceAtMost(1f)),
+                        Color.hsv((h + 60f) % 360f, 0.85f, 0.38f + 0.35f * g),
+                        Color.hsv((h + 120f) % 360f, 0.85f, 0.26f + 0.22f * g),
                     ),
                     start = Offset.Zero,
                     end = Offset(size.width, size.height),
@@ -135,6 +142,10 @@ private val EmeraldScheme = darkColorScheme(
 
 @Composable
 fun VolnaTheme(theme: AppTheme, content: @Composable () -> Unit) {
+    if (theme == AppTheme.RGB_BEAT) {
+        BeatTheme(content)
+        return
+    }
     if (theme == AppTheme.RGB) {
         val hue = rememberInfiniteTransition(label = "rgb").animateFloat(
             initialValue = 0f, targetValue = 360f,
@@ -152,9 +163,76 @@ fun VolnaTheme(theme: AppTheme, content: @Composable () -> Unit) {
         AppTheme.DARK -> DarkScheme to Color(0xFF101014)
         AppTheme.BLUE -> BlueScheme to Color(0xFF1B34B8)
         AppTheme.EMERALD -> EmeraldScheme to Color(0xFF0C5C46)
-        AppTheme.RGB -> DarkScheme to Color(0xFF101014)
+        AppTheme.RGB, AppTheme.RGB_BEAT -> DarkScheme to Color(0xFF101014)
     }
     CompositionLocalProvider(LocalPanelInk provides ink) {
         MaterialTheme(colorScheme = scheme, content = content)
     }
 }
+
+/**
+ * RGB под музыку. Каждый кадр берём из [com.volna.music.player.BeatMeter] громкость баса и удары:
+ * удар — вспышка и рывок цвета вперёд, громко — перелив быстрее, тихо/пауза — спокойный перелив.
+ * Перерисовывается только фон; кнопки меняют цвет редко и по медленному оттенку, чтобы не грузить экран.
+ */
+@Composable
+private fun BeatTheme(content: @Composable () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val hue = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val glow = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val slowHue = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val meter = com.volna.music.player.BeatMeter
+        meter.enabled = true
+        try {
+            var last = 0L
+            var pulse = 0f
+            var kick = 0f      // добавочная скорость цвета после удара, °/с
+            var level = 0f
+            var nextOutputCheck = 0L
+            while (true) {
+                androidx.compose.runtime.withFrameNanos { _ -> }
+                val now = System.nanoTime()
+                if (now >= nextOutputCheck) {
+                    meter.delayMs = if (bluetoothOutput(ctx)) 420L else 260L
+                    nextOutputCheck = now + 5_000_000_000L
+                }
+                val dt = if (last == 0L) 0f else ((now - last) / 1e9f).coerceIn(0f, 0.1f)
+                last = now
+
+                val s = meter.poll(now)
+                level += (s.level - level) * (dt * 12f).coerceAtMost(1f)
+                if (s.beats > 0) { pulse = 1f; kick = 220f }
+                pulse = maxOf(pulse - dt * 3.2f, level * 0.45f)
+                kick *= exp(-dt * 5f)
+
+                hue.floatValue = (hue.floatValue + dt * (12f + 50f * level + kick)) % 360f
+                slowHue.floatValue = (slowHue.floatValue + dt * 15f) % 360f
+                glow.floatValue = pulse
+            }
+        } finally {
+            meter.enabled = false
+        }
+    }
+
+    // кнопки — по медленному оттенку и шагами по 10°: ~1,5 пересборки экрана в секунду
+    val step by remember { derivedStateOf { (slowHue.floatValue / 10f).toInt() * 10f } }
+    CompositionLocalProvider(
+        LocalPanelInk provides Color(0xFF101014),
+        LocalRgbHue provides hue,
+        LocalRgbGlow provides glow,
+    ) {
+        MaterialTheme(colorScheme = rgbScheme(step), content = content)
+    }
+}
+
+/** Звук идёт в Bluetooth (наушники, машина по BT) — там задержка больше. */
+private fun bluetoothOutput(ctx: Context): Boolean = runCatching {
+    val am = ctx.getSystemService(android.media.AudioManager::class.java) ?: return false
+    am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS).any {
+        it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+    }
+}.getOrDefault(false)
+
+private fun exp(x: Float): Float = kotlin.math.exp(x)

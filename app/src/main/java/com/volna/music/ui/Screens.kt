@@ -102,6 +102,7 @@ private fun HomeList(vm: MainVm, onArtist: (String) -> Unit, theme: AppTheme, on
                                             AppTheme.BLUE -> androidx.compose.ui.graphics.Color(0xFF3D5AFE)
                                             AppTheme.EMERALD -> androidx.compose.ui.graphics.Color(0xFF12A37A)
                                             AppTheme.RGB -> androidx.compose.ui.graphics.Color(0xFFFF2D95)
+                                            AppTheme.RGB_BEAT -> androidx.compose.ui.graphics.Color(0xFFFFB300)
                                         },
                                     )
                                 },
