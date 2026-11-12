@@ -22,6 +22,8 @@ import com.volna.music.data.RadioActivity
 import com.volna.music.data.RadioMood
 import com.volna.music.player.VideoPreview
 import com.volna.music.data.Track
+import com.volna.music.data.LocalPlaylist
+import com.volna.music.data.PlaylistImport
 import com.volna.music.data.Yt
 import com.volna.music.data.Updater
 import com.volna.music.data.UpdateInfo
@@ -34,6 +36,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 class MainVm(app: Application) : AndroidViewModel(app) {
@@ -76,6 +80,18 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     // ---------- библиотека ----------
     var history by mutableStateOf<List<Track>>(emptyList()); private set
     var liked by mutableStateOf<List<Track>>(emptyList()); private set
+    var playlists by mutableStateOf<List<LocalPlaylist>>(emptyList()); private set
+    var openPl by mutableStateOf<LocalPlaylist?>(null); private set
+    var openPlTracks by mutableStateOf<List<Track>>(emptyList()); private set
+
+    // ---------- импорт плейлиста (из ВК или любого списка) ----------
+    /** null — импорта нет; иначе экран ввода текста или проверки найденного. */
+    var importStage by mutableStateOf<ImportStage?>(null); private set
+    var importName by mutableStateOf("Из ВК"); private set
+    var importRows by mutableStateOf<List<ImportRow>>(emptyList()); private set
+    var importRunning by mutableStateOf(false); private set
+    var importError by mutableStateOf<String?>(null); private set
+    private var importJob: Job? = null
 
     // ---------- аккаунт YouTube Music ----------
     var ytLoggedIn by mutableStateOf(YtAccount.isLoggedIn); private set
@@ -517,6 +533,164 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     fun loadRecentSearches() {
         viewModelScope.launch {
             recentSearches = withContext(Dispatchers.IO) { db.recentSearches(12) }
+            playlists = withContext(Dispatchers.IO) { db.playlists() }
+        }
+    }
+
+    // ---------- свои плейлисты ----------
+
+    fun openPlaylist(p: LocalPlaylist) {
+        openPl = p
+        openPlTracks = emptyList()
+        viewModelScope.launch { openPlTracks = withContext(Dispatchers.IO) { db.playlistTracks(p.id) } }
+    }
+
+    fun closePlaylist() { openPl = null; openPlTracks = emptyList() }
+
+    fun removeFromPlaylist(t: Track) {
+        val p = openPl ?: return
+        openPlTracks = openPlTracks.filter { it.id != t.id }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { db.removeFromPlaylist(p.id, t.id) }
+            refreshLibrary()
+        }
+    }
+
+    fun deletePlaylist(p: LocalPlaylist) {
+        closePlaylist()
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { db.deletePlaylist(p.id) }
+            refreshLibrary()
+            toast("Плейлист удалён")
+        }
+    }
+
+    // ---------- импорт ----------
+
+    fun openImport() {
+        if (importStage == null) importStage = ImportStage.INPUT
+    }
+
+    fun setImportName(name: String) { importName = name }
+
+    /** Разобрать текст и начать искать треки на YouTube. */
+    fun startImport(text: String) {
+        val entries = PlaylistImport.parse(text)
+        if (entries.isEmpty()) {
+            toast("Не нашёл в тексте ни одного трека")
+            return
+        }
+        importRows = entries.map { ImportRow(it.text, it.query) }
+        importError = null
+        importStage = ImportStage.REVIEW
+        runSearch(importRows.indices.toList())
+    }
+
+    /** Ещё раз поискать ненайденные. */
+    fun retryMissing() {
+        if (importRunning) return
+        runSearch(importRows.indices.filter { importRows[it].state.let { s -> s != ImportRow.State.OK && s != ImportRow.State.DOUBT } })
+    }
+
+    /** Поискать одну строку по исправленному запросу. */
+    fun researchRow(i: Int, query: String) {
+        val q = query.trim()
+        if (q.isEmpty() || i !in importRows.indices) return
+        updateRow(i) { it.copy(query = q, state = ImportRow.State.WAIT, options = emptyList(), pick = 0) }
+        viewModelScope.launch { searchRow(i) }
+    }
+
+    fun pickOption(i: Int, option: Int) = updateRow(i) { it.copy(pick = option, state = ImportRow.State.OK, on = true) }
+
+    fun toggleRow(i: Int) = updateRow(i) { it.copy(on = !it.on) }
+
+    fun saveImport() {
+        val list = importRows.filter { it.on }.mapNotNull { it.track }
+        if (list.isEmpty()) { toast("Нечего сохранять"); return }
+        val name = importName.trim().ifEmpty { "Из ВК" }
+        viewModelScope.launch {
+            val id = withContext(Dispatchers.IO) { db.createPlaylist(name, list) }
+            cancelImport()
+            refreshLibrary()
+            toast("Сохранено: $name (${list.distinctBy { it.id }.size})")
+            openPlaylist(LocalPlaylist(id, name, list.size, list.first().thumb))
+        }
+    }
+
+    fun cancelImport() {
+        importJob?.cancel()
+        importJob = null
+        importRunning = false
+        importStage = null
+        importRows = emptyList()
+        importError = null
+    }
+
+    private fun updateRow(i: Int, f: (ImportRow) -> ImportRow) {
+        val rows = importRows
+        if (i !in rows.indices) return
+        importRows = rows.toMutableList().also { it[i] = f(it[i]) }
+    }
+
+    private fun runSearch(indices: List<Int>) {
+        if (indices.isEmpty()) return
+        importJob?.cancel()
+        importError = null
+        importRunning = true
+        importJob = viewModelScope.launch {
+            // Не больше трёх запросов к YouTube одновременно — иначе он начинает просить капчу
+            val gate = Semaphore(3)
+            try {
+                kotlinx.coroutines.coroutineScope {
+                    indices.forEach { i ->
+                        launch { gate.withPermit { searchRow(i); delay(150) } }
+                    }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                importError = describeError(e).substringBefore("\n\n")
+            } finally {
+                importRunning = false
+            }
+        }
+    }
+
+    private suspend fun searchRow(i: Int) {
+        val q = importRows.getOrNull(i)?.query ?: return
+        var result: List<Track>? = null
+        var failure: Exception? = null
+        for (attempt in 0..1) {
+            try {
+                result = Yt.searchSongs(q).take(5)
+                break
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                failure = e
+                // YouTube просит подтвердить, что мы не бот: дальше искать бесполезно
+                if (isBotBlock(e)) throw e
+                delay(1500)
+            }
+        }
+        val found = result
+        if (found == null) {
+            updateRow(i) { it.copy(state = ImportRow.State.ERROR) }
+            if (failure != null) importError = describeError(failure).substringBefore("\n\n")
+            return
+        }
+        if (found.isEmpty()) {
+            updateRow(i) { it.copy(state = ImportRow.State.NONE, options = emptyList()) }
+            return
+        }
+        val scores = found.map { PlaylistImport.score(q, it) }
+        val best = scores.indices.maxByOrNull { scores[it] } ?: 0
+        val sure = scores[best] >= 0.6
+        updateRow(i) {
+            it.copy(
+                options = found, pick = best,
+                state = if (sure) ImportRow.State.OK else ImportRow.State.DOUBT,
+            )
         }
     }
 

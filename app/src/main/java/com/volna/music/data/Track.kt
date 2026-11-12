@@ -16,3 +16,6 @@ fun formatTime(seconds: Long): String {
     val s = seconds % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
+
+/** Плейлист, собранный в «Волне» (хранится только на устройстве). */
+data class LocalPlaylist(val id: Long, val name: String, val count: Int, val thumb: String?)

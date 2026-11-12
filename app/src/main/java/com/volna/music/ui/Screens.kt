@@ -441,16 +441,21 @@ fun LibraryScreen(vm: MainVm) {
 
     Column(Modifier.fillMaxSize()) {
         SectionTitle("Библиотека") {
-            if (tab == 1 && vm.history.isNotEmpty()) {
+            if (tab == 2 && vm.history.isNotEmpty()) {
                 IconButton(onClick = { confirmClear = true }) { Icon(Icons.Filled.DeleteSweep, "Очистить историю") }
             }
         }
         TabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Любимые") })
-            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("История") })
-            Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("YouTube") })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Плейлисты") })
+            Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("История") })
+            Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("YouTube") })
         }
-        if (tab == 2) {
+        if (tab == 1) {
+            PlaylistsTab(vm)
+            return@Column
+        }
+        if (tab == 3) {
             YtAccountTab(vm)
             return@Column
         }
@@ -595,7 +600,7 @@ private fun YtAccountTab(vm: MainVm) {
 }
 
 @Composable
-private fun PlaylistRow(title: String, subtitle: String, thumb: String?, onClick: () -> Unit) {
+internal fun PlaylistRow(title: String, subtitle: String, thumb: String?, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

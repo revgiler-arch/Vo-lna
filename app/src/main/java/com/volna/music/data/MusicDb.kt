@@ -10,7 +10,7 @@ import android.database.sqlite.SQLiteOpenHelper
  * Локальная база: история прослушиваний, поиски, оценки (лайк/дизлайк).
  * Всё хранится только на телефоне.
  */
-class MusicDb(context: Context) : SQLiteOpenHelper(context, "volna.db", null, 1) {
+class MusicDb(context: Context) : SQLiteOpenHelper(context, "volna.db", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -27,9 +27,68 @@ class MusicDb(context: Context) : SQLiteOpenHelper(context, "volna.db", null, 1)
         db.execSQL("CREATE INDEX plays_at ON plays(at)")
         db.execSQL("CREATE TABLE ratings(vid TEXT PRIMARY KEY, r INTEGER, at INTEGER)")
         db.execSQL("CREATE TABLE searches(q TEXT PRIMARY KEY, at INTEGER, n INTEGER)")
+        createPlaylists(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) createPlaylists(db)
+    }
+
+    private fun createPlaylists(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS playlists(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, created INTEGER)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS playlist_tracks(pid INTEGER, pos INTEGER, vid TEXT)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS pt_pid ON playlist_tracks(pid)")
+    }
+
+    // ---------- свои плейлисты ----------
+
+    fun playlists(): List<LocalPlaylist> =
+        readableDatabase.rawQuery(
+            """SELECT p.id, p.name, COUNT(pt.vid),
+                 (SELECT t.thumb FROM playlist_tracks x JOIN tracks t ON t.vid=x.vid
+                  WHERE x.pid=p.id ORDER BY x.pos LIMIT 1)
+               FROM playlists p LEFT JOIN playlist_tracks pt ON pt.pid=p.id
+               GROUP BY p.id ORDER BY p.created DESC""",
+            null,
+        ).use { c ->
+            buildList { while (c.moveToNext()) add(LocalPlaylist(c.getLong(0), c.getString(1) ?: "", c.getInt(2), c.getString(3))) }
+        }
+
+    fun playlistTracks(id: Long): List<Track> = tracks(
+        """SELECT t.vid,t.title,t.artist,t.artist_url,t.thumb,t.duration
+           FROM playlist_tracks pt JOIN tracks t ON t.vid=pt.vid
+           WHERE pt.pid=? ORDER BY pt.pos""",
+        id.toString(),
+    )
+
+    fun createPlaylist(name: String, list: List<Track>): Long {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val id = db.insert("playlists", null, ContentValues().apply {
+                put("name", name); put("created", System.currentTimeMillis())
+            })
+            list.distinctBy { it.id }.forEachIndexed { i, t ->
+                saveTrack(t)
+                db.insert("playlist_tracks", null, ContentValues().apply {
+                    put("pid", id); put("pos", i); put("vid", t.id)
+                })
+            }
+            db.setTransactionSuccessful()
+            return id
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun removeFromPlaylist(id: Long, vid: String) {
+        writableDatabase.delete("playlist_tracks", "pid=? AND vid=?", arrayOf(id.toString(), vid))
+    }
+
+    fun deletePlaylist(id: Long) {
+        writableDatabase.delete("playlist_tracks", "pid=?", arrayOf(id.toString()))
+        writableDatabase.delete("playlists", "id=?", arrayOf(id.toString()))
+    }
 
     // ---------- треки ----------
 
