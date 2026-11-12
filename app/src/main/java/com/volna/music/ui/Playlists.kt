@@ -179,7 +179,7 @@ private fun ImportInput(vm: MainVm) {
                 )
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
-                    value = vm.importName, onValueChange = vm::setImportName,
+                    value = vm.importName, onValueChange = vm::renameImport,
                     label = { Text("Название плейлиста") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )

@@ -571,7 +571,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
         if (importStage == null) importStage = ImportStage.INPUT
     }
 
-    fun setImportName(name: String) { importName = name }
+    fun renameImport(name: String) { importName = name }
 
     /** Разобрать текст и начать искать треки на YouTube. */
     fun startImport(text: String) {
