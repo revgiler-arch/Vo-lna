@@ -36,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -302,6 +303,15 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        restoreImportDraft()
+        viewModelScope.launch {
+            // Незаконченный импорт храним в файле: переживёт обновление и перезапуск «Волны»
+            androidx.compose.runtime.snapshotFlow { Triple(importStage, importName, importRows) }
+                .collectLatest { (stage, name, rows) ->
+                    delay(800)
+                    withContext(Dispatchers.IO) { writeImportDraft(stage, name, rows) }
+                }
+        }
         viewModelScope.launch {
             com.volna.music.player.SleepTimer.endAt.collect { sleepEndAt = it; tickSleep() }
         }
@@ -681,12 +691,74 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     }
 
     fun cancelImport() {
+        runCatching { draftFile.delete() }
         importJob?.cancel()
         importJob = null
         importRunning = false
         importStage = null
         importRows = emptyList()
         importError = null
+    }
+
+    private val draftFile get() = java.io.File(getApplication<Application>().filesDir, "import_draft.json")
+
+    private fun writeImportDraft(stage: ImportStage?, name: String, rows: List<ImportRow>) {
+        runCatching {
+            if (stage != ImportStage.REVIEW || rows.isEmpty()) { draftFile.delete(); return }
+            val arr = org.json.JSONArray()
+            rows.forEach { r ->
+                arr.put(org.json.JSONObject().apply {
+                    put("text", r.text); put("query", r.query); put("pick", r.pick); put("on", r.on)
+                    // недоискали — после перезапуска поищем заново
+                    put("state", if (r.state == ImportRow.State.ERROR) ImportRow.State.WAIT.name else r.state.name)
+                    put("options", org.json.JSONArray().apply {
+                        r.options.forEach { t ->
+                            put(org.json.JSONObject().apply {
+                                put("id", t.id); put("title", t.title); put("artist", t.artist)
+                                put("artistUrl", t.artistUrl ?: ""); put("thumb", t.thumb ?: ""); put("dur", t.durationSec)
+                            })
+                        }
+                    })
+                })
+            }
+            val tmp = java.io.File(draftFile.path + ".tmp")
+            tmp.writeText(org.json.JSONObject().put("name", name).put("rows", arr).toString())
+            tmp.renameTo(draftFile)
+        }
+    }
+
+    private fun restoreImportDraft() {
+        runCatching {
+            if (!draftFile.exists()) return
+            val o = org.json.JSONObject(draftFile.readText())
+            val arr = o.getJSONArray("rows")
+            val rows = (0 until arr.length()).map { i ->
+                val r = arr.getJSONObject(i)
+                val opts = r.optJSONArray("options") ?: org.json.JSONArray()
+                ImportRow(
+                    text = r.getString("text"),
+                    query = r.getString("query"),
+                    state = runCatching { ImportRow.State.valueOf(r.getString("state")) }.getOrDefault(ImportRow.State.WAIT),
+                    options = (0 until opts.length()).map { k ->
+                        val t = opts.getJSONObject(k)
+                        Track(
+                            id = t.getString("id"), title = t.optString("title"), artist = t.optString("artist"),
+                            artistUrl = t.optString("artistUrl").ifEmpty { null }, thumb = t.optString("thumb").ifEmpty { null },
+                            durationSec = t.optLong("dur"),
+                        )
+                    },
+                    pick = r.optInt("pick"),
+                    on = r.optBoolean("on", true),
+                )
+            }
+            if (rows.isEmpty()) return
+            importName = o.optString("name", "Из ВК")
+            importRows = rows
+            importStage = ImportStage.REVIEW
+            // поиск прервался (обновление, перезапуск) — продолжаем с того места
+            val left = rows.indices.filter { rows[it].state == ImportRow.State.WAIT }
+            if (left.isNotEmpty()) runSearch(left)
+        }.onFailure { draftFile.delete() }
     }
 
     private fun updateRow(i: Int, f: (ImportRow) -> ImportRow) {
