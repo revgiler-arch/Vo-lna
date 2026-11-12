@@ -47,6 +47,8 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material.icons.filled.SkipNext
@@ -249,11 +251,25 @@ private fun FullPlayer(vm: MainVm, onClose: () -> Unit) {
                 IconButton(onClick = onClose, modifier = Modifier.size(56.dp)) {
                     Icon(Icons.Filled.KeyboardArrowDown, "Свернуть", Modifier.size(32.dp))
                 }
-                Text(
-                    if (showQueue) "Далее" else "Сейчас играет",
-                    Modifier.weight(1f), textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleSmall,
-                )
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        if (showQueue) "Далее" else "Сейчас играет",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    sleepLabel(vm)?.let {
+                        Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                var sleepDialog by remember { mutableStateOf(false) }
+                IconButton(onClick = { sleepDialog = true }, modifier = Modifier.size(56.dp)) {
+                    val on = vm.sleepEndAt != null || vm.sleepEndOfTrack
+                    Icon(
+                        Icons.Filled.Bedtime, "Таймер сна", Modifier.size(28.dp),
+                        tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                if (sleepDialog) SleepDialog(vm) { sleepDialog = false }
                 IconButton(onClick = vm::toggleVideo, modifier = Modifier.size(56.dp)) {
                     Icon(
                         if (vm.videoOn) Icons.Filled.Videocam else Icons.Filled.VideocamOff,
@@ -521,4 +537,70 @@ private fun QueueList(vm: MainVm) {
             )
         }
     }
+}
+
+
+// ============================== Таймер сна ==============================
+
+/** «⏾ 12:34» / «⏾ после трека» или null, если таймер не стоит. */
+private fun sleepLabel(vm: MainVm): String? = when {
+    vm.sleepEndOfTrack -> "⏾ после этого трека"
+    vm.sleepEndAt != null -> "⏾ " + com.volna.music.data.formatTime((vm.sleepLeftMs + 999) / 1000)
+    else -> null
+}
+
+@Composable
+private fun SleepDialog(vm: MainVm, onDismiss: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Filled.Bedtime, null) },
+        title = { Text("Выключить музыку") },
+        text = {
+            Column {
+                sleepLabel(vm)?.let {
+                    Text("Сейчас: $it", color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(8.dp))
+                }
+                val presets = listOf(10, 15, 30, 45, 60, 90, 120)
+                presets.chunked(4).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+                        row.forEach { m ->
+                            androidx.compose.material3.OutlinedButton(
+                                onClick = { vm.sleepIn(m); onDismiss() },
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp),
+                            ) { Text(if (m < 60 || m % 60 != 0) "$m мин" else "${m / 60} ч") }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.material3.FilledTonalButton(
+                    onClick = { vm.sleepAfterTrack(); onDismiss() }, modifier = Modifier.fillMaxWidth(),
+                ) { Text("После этого трека") }
+                Spacer(Modifier.height(4.dp))
+                androidx.compose.material3.FilledTonalButton(
+                    onClick = {
+                        val now = java.util.Calendar.getInstance()
+                        android.app.TimePickerDialog(
+                            ctx,
+                            { _, h, m -> vm.sleepAt(h, m) },
+                            now.get(java.util.Calendar.HOUR_OF_DAY), now.get(java.util.Calendar.MINUTE), true,
+                        ).show()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("В заданное время…") }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Последние 30 секунд громкость плавно стихает.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Закрыть") } },
+        dismissButton = if (vm.sleepEndAt != null || vm.sleepEndOfTrack) {
+            { TextButton(onClick = { vm.sleepCancel(); onDismiss() }) { Text("Отключить таймер") } }
+        } else null,
+    )
 }

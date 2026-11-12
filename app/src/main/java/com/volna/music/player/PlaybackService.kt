@@ -103,6 +103,43 @@ class PlaybackService : MediaSessionService() {
             .setSessionActivity(open)
             .build()
         com.volna.music.Diag.mark(this, "service:session ok")
+        watchSleepTimer()
+    }
+
+    // ---------- таймер сна ----------
+
+    private fun watchSleepTimer() {
+        scope.launch {
+            SleepTimer.endOfTrack.collect { on ->
+                player.pauseAtEndOfMediaItems = on
+                if (!on) player.volume = 1f
+            }
+        }
+        scope.launch {
+            var fading = false
+            while (true) {
+                val end = SleepTimer.endAt.value
+                if (end == null) {
+                    if (fading) { player.volume = 1f; fading = false }
+                } else {
+                    val left = end - System.currentTimeMillis()
+                    when {
+                        left <= 0 -> {
+                            SleepTimer.cancel()
+                            player.pause()
+                            player.volume = 1f
+                            fading = false
+                        }
+                        left < SleepTimer.FADE_MS -> {
+                            fading = true
+                            player.volume = (left.toFloat() / SleepTimer.FADE_MS).coerceIn(0.05f, 1f)
+                        }
+                        fading -> { player.volume = 1f; fading = false }
+                    }
+                }
+                kotlinx.coroutines.delay(if (end != null && end - System.currentTimeMillis() < SleepTimer.FADE_MS + 2000) 250 else 1000)
+            }
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) = session
@@ -197,6 +234,14 @@ class PlaybackService : MediaSessionService() {
     }
 
     private val listener = object : Player.Listener {
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            // «После этого трека»: плеер встал в конце трека — таймер отработал
+            if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM && SleepTimer.endOfTrack.value) {
+                SleepTimer.cancel()
+                if (player.hasNextMediaItem()) player.seekToNextMediaItem()
+            }
+        }
+
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             finishCurrentPlay()
             if (mediaItem != null) startPlay(mediaItem)

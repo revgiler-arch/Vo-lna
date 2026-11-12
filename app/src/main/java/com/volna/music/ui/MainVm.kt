@@ -59,6 +59,31 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     var repeatMode by mutableStateOf(Player.REPEAT_MODE_OFF); private set
     var rating by mutableStateOf(0); private set
 
+    // ---------- таймер сна ----------
+    var sleepEndAt by mutableStateOf<Long?>(null); private set
+    var sleepEndOfTrack by mutableStateOf(false); private set
+    var sleepLeftMs by mutableStateOf(0L); private set
+
+    fun sleepIn(min: Int) {
+        com.volna.music.player.SleepTimer.inMinutes(min)
+        toast("Выключу через $min мин")
+    }
+
+    fun sleepAt(hour: Int, minute: Int) {
+        com.volna.music.player.SleepTimer.at(hour, minute)
+        toast("Выключу в %02d:%02d".format(hour, minute))
+    }
+
+    fun sleepAfterTrack() {
+        com.volna.music.player.SleepTimer.afterThisTrack()
+        toast("Выключу после этого трека")
+    }
+
+    fun sleepCancel() {
+        com.volna.music.player.SleepTimer.cancel()
+        toast("Таймер выключен")
+    }
+
     // ---------- главная ----------
     var forYou by mutableStateOf<List<Track>>(emptyList()); private set
     var recent by mutableStateOf<List<Track>>(emptyList()); private set
@@ -277,6 +302,12 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        viewModelScope.launch {
+            com.volna.music.player.SleepTimer.endAt.collect { sleepEndAt = it; tickSleep() }
+        }
+        viewModelScope.launch {
+            com.volna.music.player.SleepTimer.endOfTrack.collect { sleepEndOfTrack = it }
+        }
         connect()
         checkUpdate()
         refreshBatteryHint()
@@ -290,9 +321,14 @@ class MainVm(app: Application) : AndroidViewModel(app) {
                     if (it.duration > 0) durationMs = it.duration
                     if (videoOn && videoVisible) video.sync(positionMs, it.isPlaying)
                 }
+                tickSleep()
                 delay(500)
             }
         }
+    }
+
+    private fun tickSleep() {
+        sleepLeftMs = sleepEndAt?.let { (it - System.currentTimeMillis()).coerceAtLeast(0) } ?: 0L
     }
 
     private fun connect() {
