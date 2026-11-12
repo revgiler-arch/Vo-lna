@@ -81,6 +81,28 @@ class MusicDb(context: Context) : SQLiteOpenHelper(context, "volna.db", null, 2)
         }
     }
 
+    /** Переписать плейлист целиком (после правок импорта). Нет такого — создаём. */
+    fun replacePlaylist(id: Long, name: String, list: List<Track>): Long {
+        val db = writableDatabase
+        val exists = db.rawQuery("SELECT 1 FROM playlists WHERE id=?", arrayOf(id.toString())).use { it.moveToFirst() }
+        if (!exists) return createPlaylist(name, list)
+        db.beginTransaction()
+        try {
+            db.update("playlists", ContentValues().apply { put("name", name) }, "id=?", arrayOf(id.toString()))
+            db.delete("playlist_tracks", "pid=?", arrayOf(id.toString()))
+            list.distinctBy { it.id }.forEachIndexed { i, t ->
+                saveTrack(t)
+                db.insert("playlist_tracks", null, ContentValues().apply {
+                    put("pid", id); put("pos", i); put("vid", t.id)
+                })
+            }
+            db.setTransactionSuccessful()
+            return id
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     fun removeFromPlaylist(id: Long, vid: String) {
         writableDatabase.delete("playlist_tracks", "pid=? AND vid=?", arrayOf(id.toString(), vid))
     }

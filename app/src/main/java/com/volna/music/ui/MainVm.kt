@@ -118,6 +118,8 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     var importRunning by mutableStateOf(false); private set
     var importError by mutableStateOf<String?>(null); private set
     private var importJob: Job? = null
+    /** Плейлист, в который уже сохранён этот импорт (сохраняем сразу после поиска). */
+    private var importPid: Long? = null
     /** Ссылка, которой поделились из ВК: открыть импорт по ней. */
     var sharedLink by mutableStateOf<String?>(null); private set
 
@@ -677,12 +679,23 @@ class MainVm(app: Application) : AndroidViewModel(app) {
 
     fun toggleRow(i: Int) = updateRow(i) { it.copy(on = !it.on) }
 
-    fun saveImport() {
+    /** Записать текущее состояние импорта в плейлист (создать или обновить). */
+    private suspend fun storeImport(): Pair<Long, List<Track>>? {
         val list = importRows.filter { it.on }.mapNotNull { it.track }
-        if (list.isEmpty()) { toast("Нечего сохранять"); return }
+        if (list.isEmpty()) return null
+        val name = importName.trim().ifEmpty { "Из ВК" }
+        val pid = importPid
+        val id = withContext(Dispatchers.IO) {
+            if (pid == null) db.createPlaylist(name, list) else db.replacePlaylist(pid, name, list)
+        }
+        importPid = id
+        return id to list
+    }
+
+    fun saveImport() {
         val name = importName.trim().ifEmpty { "Из ВК" }
         viewModelScope.launch {
-            val id = withContext(Dispatchers.IO) { db.createPlaylist(name, list) }
+            val (id, list) = storeImport() ?: run { toast("Нечего сохранять"); return@launch }
             cancelImport()
             refreshLibrary()
             toast("Сохранено: $name (${list.distinctBy { it.id }.size})")
@@ -691,6 +704,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     }
 
     fun cancelImport() {
+        importPid = null
         runCatching { draftFile.delete() }
         importJob?.cancel()
         importJob = null
@@ -722,7 +736,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
                 })
             }
             val tmp = java.io.File(draftFile.path + ".tmp")
-            tmp.writeText(org.json.JSONObject().put("name", name).put("rows", arr).toString())
+            tmp.writeText(org.json.JSONObject().put("name", name).put("pid", importPid ?: -1L).put("rows", arr).toString())
             tmp.renameTo(draftFile)
         }
     }
@@ -753,6 +767,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
             }
             if (rows.isEmpty()) return
             importName = o.optString("name", "Из ВК")
+            importPid = o.optLong("pid", -1L).takeIf { it > 0 }
             importRows = rows
             importStage = ImportStage.REVIEW
             // поиск прервался (обновление, перезапуск) — продолжаем с того места
@@ -787,6 +802,11 @@ class MainVm(app: Application) : AndroidViewModel(app) {
                 importError = describeError(e).substringBefore("\n\n")
             } finally {
                 importRunning = false
+            }
+            // Сразу сохраняем найденное как плейлист — ничего не потеряется, правки потом обновят его
+            if (storeImport() != null) {
+                refreshLibrary()
+                toast("Плейлист «${importName.trim().ifEmpty { "Из ВК" }}» сохранён. Можно проверить сомнительные")
             }
         }
     }

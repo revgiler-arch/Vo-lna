@@ -318,7 +318,7 @@ private fun ImportReview(vm: MainVm) {
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = vm::saveImport, enabled = !vm.importRunning && toSave > 0) {
-                        Text("Сохранить ($toSave)")
+                        Text("Готово ($toSave)")
                     }
                     if (!vm.importRunning && missing + rows.count { it.state == ImportRow.State.WAIT } > 0) {
                         OutlinedButton(onClick = vm::retryMissing) { Text("Искать ненайденные") }
