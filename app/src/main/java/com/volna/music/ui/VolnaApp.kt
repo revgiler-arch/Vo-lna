@@ -237,146 +237,197 @@ private fun FullPlayer(vm: MainVm, onClose: () -> Unit) {
     ) {
       Box(Modifier.fillMaxSize()) {
         AppBackdrop(Modifier.matchParentSize())
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            Row(
-                Modifier.fillMaxWidth().padding(4.dp).pointerInput(Unit) {
-                    detectVerticalDragGestures(
-                        onDragEnd = onDownEnd,
-                        onDragCancel = onDownEnd,
-                        onVerticalDrag = { change, dy -> change.consume(); onDownDrag(dy) },
-                    )
-                },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onClose, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Filled.KeyboardArrowDown, "Свернуть", Modifier.size(32.dp))
-                }
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        if (showQueue) "Далее" else "Сейчас играет",
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    sleepLabel(vm)?.let {
-                        Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                var sleepDialog by remember { mutableStateOf(false) }
-                IconButton(onClick = { sleepDialog = true }, modifier = Modifier.size(56.dp)) {
-                    val on = vm.sleepEndAt != null || vm.sleepEndOfTrack
-                    Icon(
-                        Icons.Filled.Bedtime, "Таймер сна", Modifier.size(28.dp),
-                        tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                if (sleepDialog) SleepDialog(vm) { sleepDialog = false }
-                IconButton(onClick = vm::toggleVideo, modifier = Modifier.size(56.dp)) {
-                    Icon(
-                        if (vm.videoOn) Icons.Filled.Videocam else Icons.Filled.VideocamOff,
-                        if (vm.videoOn) "Выключить видео" else "Включить видео", Modifier.size(28.dp),
-                        tint = if (vm.videoOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                IconButton(onClick = { showQueue = !showQueue }, modifier = Modifier.size(56.dp)) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.QueueMusic, "Очередь", Modifier.size(28.dp),
-                        tint = if (showQueue) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                if (showQueue) {
-                    QueueList(vm)
-                } else {
-                    VideoVisibility(vm)
-                    SwipeArtwork(vm, t.thumb, onDownDrag, onDownEnd)
-                }
-            }
-
-            // название + сердечко + три точки
-            Row(Modifier.padding(start = 24.dp, end = 8.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        t.title, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                IconButton(onClick = { vm.toggleLike(t) }, modifier = Modifier.size(56.dp)) {
-                    if (vm.rating > 0) {
-                        Icon(Icons.Filled.Favorite, "Убрать лайк", Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
-                    } else {
-                        Icon(Icons.Filled.FavoriteBorder, "Нравится", Modifier.size(32.dp))
-                    }
-                }
-                Box {
-                    IconButton(onClick = { menu = true }, modifier = Modifier.size(56.dp)) {
-                        Icon(Icons.Filled.MoreVert, "Меню", Modifier.size(32.dp))
-                    }
-                    TrackMenu(t, vm, expanded = menu, onDismiss = { menu = false })
-                }
-            }
-
-            // сплошная белая панель управления с крупными кнопками
-            Surface(
-                color = Color.White,
-                contentColor = ink,
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(Modifier.navigationBarsPadding().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 16.dp)) {
-                    SeekBar(vm, ink)
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = vm::toggleShuffle, modifier = Modifier.size(56.dp)) {
-                            Icon(
-                                Icons.Filled.Shuffle, "Перемешать", Modifier.size(28.dp),
-                                tint = if (vm.shuffle) ink else ink.copy(alpha = 0.35f),
-                            )
-                        }
-                        IconButton(onClick = vm::previous, modifier = Modifier.size(76.dp)) {
-                            Icon(Icons.Filled.SkipPrevious, "Предыдущий", Modifier.size(52.dp), tint = ink)
-                        }
-                        FilledIconButton(
-                            onClick = vm::togglePlay,
-                            modifier = Modifier.size(92.dp),
-                            colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
-                                containerColor = ink, contentColor = Color.White,
-                            ),
-                        ) {
-                            if (vm.isBuffering && !vm.isPlaying) {
-                                CircularProgressIndicator(Modifier.size(40.dp), color = Color.White)
-                            } else {
-                                Icon(
-                                    if (vm.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                    "Пауза/Играть", Modifier.size(56.dp),
-                                )
-                            }
-                        }
-                        IconButton(onClick = vm::next, modifier = Modifier.size(76.dp)) {
-                            Icon(Icons.Filled.SkipNext, "Следующий", Modifier.size(52.dp), tint = ink)
-                        }
-                        IconButton(onClick = vm::cycleRepeat, modifier = Modifier.size(56.dp)) {
-                            val (icon, on) = when (vm.repeatMode) {
-                                Player.REPEAT_MODE_ONE -> Icons.Filled.RepeatOne to true
-                                Player.REPEAT_MODE_ALL -> Icons.Filled.Repeat to true
-                                else -> Icons.Filled.Repeat to false
-                            }
-                            Icon(icon, "Повтор", Modifier.size(28.dp), tint = if (on) ink else ink.copy(alpha = 0.35f))
+        androidx.compose.foundation.layout.BoxWithConstraints(
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding(),
+        ) {
+            // магнитола и планшет «лёжа»: обложка слева, всё управление справа
+            val wide = maxWidth > maxHeight * 1.15f && maxWidth >= 560.dp
+            if (wide) {
+                Row(Modifier.fillMaxSize()) {
+                    Box(Modifier.weight(1f).fillMaxSize().padding(12.dp)) {
+                        if (showQueue) QueueList(vm) else {
+                            VideoVisibility(vm)
+                            SwipeArtwork(vm, t.thumb, onDownDrag, onDownEnd)
                         }
                     }
+                    Column(Modifier.weight(1f).fillMaxSize()) {
+                        PlayerTopBar(vm, showQueue, { showQueue = !showQueue }, onClose, onDownDrag, onDownEnd)
+                        Spacer(Modifier.weight(1f))
+                        PlayerTitle(vm, t, menu, { menu = it })
+                        PlayerControls(vm, ink, rounded = RoundedCornerShape(topStart = 28.dp))
+                    }
+                }
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    PlayerTopBar(vm, showQueue, { showQueue = !showQueue }, onClose, onDownDrag, onDownEnd)
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        if (showQueue) QueueList(vm) else {
+                            VideoVisibility(vm)
+                            SwipeArtwork(vm, t.thumb, onDownDrag, onDownEnd)
+                        }
+                    }
+                    PlayerTitle(vm, t, menu, { menu = it })
+                    PlayerControls(vm, ink, rounded = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 }
             }
         }
       }
+    }
+}
+
+/** Верхняя строка плеера: свернуть, заголовок с таймером, таймер сна, видео, очередь. */
+@Composable
+private fun PlayerTopBar(
+    vm: MainVm,
+    showQueue: Boolean,
+    onQueue: () -> Unit,
+    onClose: () -> Unit,
+    onDownDrag: (Float) -> Unit,
+    onDownEnd: () -> Unit,
+) {
+    var sleepDialog by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth().padding(4.dp).pointerInput(Unit) {
+            detectVerticalDragGestures(
+                onDragEnd = onDownEnd,
+                onDragCancel = onDownEnd,
+                onVerticalDrag = { change, dy -> change.consume(); onDownDrag(dy) },
+            )
+        },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onClose, modifier = Modifier.size(52.dp)) {
+            Icon(Icons.Filled.KeyboardArrowDown, "Свернуть", Modifier.size(32.dp))
+        }
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                if (showQueue) "Далее" else "Сейчас играет",
+                textAlign = TextAlign.Center, maxLines = 1,
+                style = MaterialTheme.typography.titleSmall,
+            )
+            sleepLabel(vm)?.let {
+                Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+            }
+        }
+        IconButton(onClick = { sleepDialog = true }, modifier = Modifier.size(52.dp)) {
+            val on = vm.sleepEndAt != null || vm.sleepEndOfTrack
+            Icon(
+                Icons.Filled.Bedtime, "Таймер сна", Modifier.size(26.dp),
+                tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        if (sleepDialog) SleepDialog(vm) { sleepDialog = false }
+        IconButton(onClick = vm::toggleVideo, modifier = Modifier.size(52.dp)) {
+            Icon(
+                if (vm.videoOn) Icons.Filled.Videocam else Icons.Filled.VideocamOff,
+                if (vm.videoOn) "Выключить видео" else "Включить видео", Modifier.size(26.dp),
+                tint = if (vm.videoOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        IconButton(onClick = onQueue, modifier = Modifier.size(52.dp)) {
+            Icon(
+                Icons.AutoMirrored.Filled.QueueMusic, "Очередь", Modifier.size(26.dp),
+                tint = if (showQueue) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+/** Название + сердечко + три точки. */
+@Composable
+private fun PlayerTitle(vm: MainVm, t: com.volna.music.data.Track, menu: Boolean, setMenu: (Boolean) -> Unit) {
+    Row(Modifier.padding(start = 24.dp, end = 8.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                t.title, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+            )
+            Text(
+                t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = { vm.toggleLike(t) }, modifier = Modifier.size(56.dp)) {
+            if (vm.rating > 0) {
+                Icon(Icons.Filled.Favorite, "Убрать лайк", Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
+            } else {
+                Icon(Icons.Filled.FavoriteBorder, "Нравится", Modifier.size(32.dp))
+            }
+        }
+        Box {
+            IconButton(onClick = { setMenu(true) }, modifier = Modifier.size(56.dp)) {
+                Icon(Icons.Filled.MoreVert, "Меню", Modifier.size(32.dp))
+            }
+            TrackMenu(t, vm, expanded = menu, onDismiss = { setMenu(false) })
+        }
+    }
+}
+
+/**
+ * Белая панель с крупными кнопками. Размер кнопок подстраивается под ширину:
+ * на узком телефоне всё помещается, на магнитоле кнопки крупные.
+ */
+@Composable
+private fun PlayerControls(vm: MainVm, ink: Color, rounded: androidx.compose.ui.graphics.Shape) {
+    Surface(
+        color = Color.White,
+        contentColor = ink,
+        shape = rounded,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp)) {
+            SeekBar(vm, ink)
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                // эталон: 56 + 76 + 92 + 76 + 56 = 356 dp; уже — пропорционально уменьшаем
+                val k = (maxWidth / 356.dp).coerceIn(0.6f, 1f)
+                val small = 56.dp * k
+                val mid = 76.dp * k
+                val big = 92.dp * k
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = vm::toggleShuffle, modifier = Modifier.size(small)) {
+                        Icon(
+                            Icons.Filled.Shuffle, "Перемешать", Modifier.size(small * 0.5f),
+                            tint = if (vm.shuffle) ink else ink.copy(alpha = 0.35f),
+                        )
+                    }
+                    IconButton(onClick = vm::previous, modifier = Modifier.size(mid)) {
+                        Icon(Icons.Filled.SkipPrevious, "Предыдущий", Modifier.size(mid * 0.68f), tint = ink)
+                    }
+                    FilledIconButton(
+                        onClick = vm::togglePlay,
+                        modifier = Modifier.size(big),
+                        colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
+                            containerColor = ink, contentColor = Color.White,
+                        ),
+                    ) {
+                        if (vm.isBuffering && !vm.isPlaying) {
+                            CircularProgressIndicator(Modifier.size(big * 0.43f), color = Color.White)
+                        } else {
+                            Icon(
+                                if (vm.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                "Пауза/Играть", Modifier.size(big * 0.6f),
+                            )
+                        }
+                    }
+                    IconButton(onClick = vm::next, modifier = Modifier.size(mid)) {
+                        Icon(Icons.Filled.SkipNext, "Следующий", Modifier.size(mid * 0.68f), tint = ink)
+                    }
+                    IconButton(onClick = vm::cycleRepeat, modifier = Modifier.size(small)) {
+                        val (icon, on) = when (vm.repeatMode) {
+                            Player.REPEAT_MODE_ONE -> Icons.Filled.RepeatOne to true
+                            Player.REPEAT_MODE_ALL -> Icons.Filled.Repeat to true
+                            else -> Icons.Filled.Repeat to false
+                        }
+                        Icon(icon, "Повтор", Modifier.size(small * 0.5f), tint = if (on) ink else ink.copy(alpha = 0.35f))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -471,7 +522,7 @@ private fun SwipeArtwork(vm: MainVm, thumb: String?, onDownDrag: (Float) -> Unit
                     model = thumb,
                     contentDescription = "Обложка — смахните влево или вправо, чтобы переключить трек",
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = swipe.fillMaxWidth().aspectRatio(1f)
+                    modifier = swipe.aspectRatio(1f) // вписываемся и по ширине, и по высоте (магнитола)
                         .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                 )
