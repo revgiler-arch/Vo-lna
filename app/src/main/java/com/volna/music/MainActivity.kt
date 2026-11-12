@@ -69,6 +69,23 @@ class MainActivity : ComponentActivity() {
         }
         setContent { VolnaApp() }
         Diag.mark(this, "activity:content set")
+        handleShare(intent)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (uiStarted) handleShare(intent)
+    }
+
+    /** «Поделиться» из ВК: ссылка на плейлист или сам список. */
+    private fun handleShare(intent: android.content.Intent?) {
+        if (intent?.action != android.content.Intent.ACTION_SEND) return
+        val text = intent.getStringExtra(android.content.Intent.EXTRA_TEXT) ?: return
+        intent.removeExtra(android.content.Intent.EXTRA_TEXT)
+        runCatching {
+            androidx.lifecycle.ViewModelProvider(this)[com.volna.music.ui.MainVm::class.java].onShared(text)
+        }
     }
 
     override fun onResume() {

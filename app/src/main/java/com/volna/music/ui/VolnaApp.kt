@@ -92,6 +92,10 @@ fun VolnaApp() {
         val vm: MainVm = viewModel()
         var tab by rememberSaveable { mutableIntStateOf(0) }
         var playerOpen by rememberSaveable { mutableStateOf(false) }
+        // Поделились плейлистом из ВК — открываем Библиотеку
+        androidx.compose.runtime.LaunchedEffect(vm.shareTick) {
+            if (vm.shareTick > 0) { tab = 2; playerOpen = false }
+        }
 
         Box(Modifier.fillMaxSize()) {
             AppBackdrop(Modifier.matchParentSize())

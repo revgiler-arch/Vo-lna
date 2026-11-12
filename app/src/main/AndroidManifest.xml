@@ -28,7 +28,19 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- «Поделиться» ссылкой на плейлист из ВК → импорт в «Волну» -->
+            <intent-filter android:label="Импорт в Волну">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
+
+        <activity
+            android:name=".VkImportActivity"
+            android:exported="false"
+            android:label="Импорт из ВК"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".LoginActivity"

@@ -47,7 +47,11 @@ object PlaylistImport {
             // Каждая строка уже «Исполнитель — Название»
             withSep * 2 >= texts.size -> texts.map { listOf(it.text) }
             // Страница ВК: название, исполнитель, длительность — длительность закрывает трек
+            // (берём две последние строки блока: перед первым треком может быть меню страницы,
+            // а хвост после последней длительности — подвал страницы, если он длиннее двух строк)
             durations * 3 >= texts.size -> splitBy(lines) { it.kind == Kind.DURATION }
+                .let { b -> if (lines.last { it.kind != Kind.BLANK }.kind != Kind.DURATION && (b.lastOrNull()?.size ?: 0) > 2) b.dropLast(1) else b }
+                .map { it.takeLast(2) }
             // Треки разделены пустыми строками
             blankBlocks(lines) -> splitBy(lines) { it.kind == Kind.BLANK }
             // Иначе считаем, что строки идут парами

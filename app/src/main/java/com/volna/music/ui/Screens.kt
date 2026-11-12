@@ -438,6 +438,9 @@ fun LibraryScreen(vm: MainVm) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var confirmClear by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.refreshLibrary() }
+    LaunchedEffect(vm.sharedLink, vm.importStage) {
+        if (vm.sharedLink != null || vm.importStage != null) tab = 1
+    }
 
     Column(Modifier.fillMaxSize()) {
         SectionTitle("Библиотека") {

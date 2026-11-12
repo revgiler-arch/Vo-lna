@@ -92,6 +92,33 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     var importRunning by mutableStateOf(false); private set
     var importError by mutableStateOf<String?>(null); private set
     private var importJob: Job? = null
+    /** Ссылка, которой поделились из ВК: открыть импорт по ней. */
+    var sharedLink by mutableStateOf<String?>(null); private set
+
+    /** Растёт при каждом «Поделиться» в «Волну» — интерфейс переключается на импорт. */
+    var shareTick by mutableStateOf(0); private set
+
+    fun onShared(text: String?) {
+        shareTick++
+        val link = com.volna.music.VkImportActivity.findVkLink(text)
+        if (link != null) {
+            sharedLink = link
+        } else if (!text.isNullOrBlank() && PlaylistImport.parse(text).isNotEmpty()) {
+            // Поделились самим списком треков
+            cancelImport()
+            startImport(text)
+        } else {
+            toast("Не нашёл ссылку на ВК")
+        }
+    }
+
+    fun consumeSharedLink() { sharedLink = null }
+
+    /** Список, считанный со страницы ВК. */
+    fun importFromWeb(text: String, title: String) {
+        if (title.isNotBlank()) importName = title.take(60)
+        startImport(text)
+    }
 
     // ---------- аккаунт YouTube Music ----------
     var ytLoggedIn by mutableStateOf(YtAccount.isLoggedIn); private set

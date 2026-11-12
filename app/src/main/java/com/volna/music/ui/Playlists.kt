@@ -78,6 +78,9 @@ private val pad = PaddingValues(bottom = 16.dp)
 
 @Composable
 fun PlaylistsTab(vm: MainVm) {
+    androidx.compose.runtime.LaunchedEffect(vm.sharedLink) {
+        if (vm.sharedLink != null) vm.openImport()
+    }
     if (vm.importStage == ImportStage.INPUT) return ImportInput(vm)
     if (vm.importStage == ImportStage.REVIEW) return ImportReview(vm)
     vm.openPl?.let { return PlaylistDetail(vm) }
@@ -157,6 +160,26 @@ private fun ImportInput(vm: MainVm) {
     var text by rememberSaveable { mutableStateOf("") }
     val clipboard = LocalClipboardManager.current
     val count = remember(text) { PlaylistImport.parse(text).size }
+    var link by rememberSaveable { mutableStateOf("") }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val web = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+    ) { r ->
+        val got = r.data?.getStringExtra(com.volna.music.VkImportActivity.EXTRA_TEXT)
+        if (r.resultCode == android.app.Activity.RESULT_OK && !got.isNullOrBlank()) {
+            vm.importFromWeb(got, r.data?.getStringExtra(com.volna.music.VkImportActivity.EXTRA_TITLE).orEmpty())
+        }
+    }
+    fun openLink(url: String) {
+        val u = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
+        web.launch(
+            android.content.Intent(ctx, com.volna.music.VkImportActivity::class.java)
+                .putExtra(com.volna.music.VkImportActivity.EXTRA_URL, u),
+        )
+    }
+    androidx.compose.runtime.LaunchedEffect(vm.sharedLink) {
+        vm.sharedLink?.let { link = it; vm.consumeSharedLink(); openLink(it) }
+    }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad) {
         item {
@@ -167,6 +190,31 @@ private fun ImportInput(vm: MainVm) {
         }
         item {
             Column(Modifier.padding(horizontal = 16.dp)) {
+                Text("По ссылке (проще всего)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "В ВК: плейлист → «Поделиться» → «Волна». Или скопируйте ссылку (из QR-кода — " +
+                        "наведите камеру, она покажет ссылку) и вставьте сюда. Откроется ВК: один раз войдите, " +
+                        "затем нажмите «Считать» — «Волна» сама прокрутит плейлист и заберёт все треки.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = link, onValueChange = { link = it }, singleLine = true,
+                        label = { Text("Ссылка на плейлист") }, modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = {
+                        val c = clipboard.getText()?.text
+                        link = com.volna.music.VkImportActivity.findVkLink(c) ?: c?.trim().orEmpty()
+                    }) { Icon(Icons.Filled.ContentPaste, "Вставить ссылку") }
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { openLink(link) }, enabled = link.isNotBlank()) { Text("Открыть и считать") }
+                Spacer(Modifier.height(20.dp))
+                Text("Или вставьте список текстом", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
                 Text(
                     "Как скопировать из ВК:\n" +
                         "1. Откройте плейлист на vk.com в браузере (на телефоне — «Версия для ПК»).\n" +
