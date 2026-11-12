@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
 
 /** Оформления приложения. Во всех — белые буквы на насыщенном фоне (лучше читается, в том числе в машине). */
 enum class AppTheme(val title: String) {
@@ -42,16 +43,26 @@ val LocalRgbHue = staticCompositionLocalOf<State<Float>?> { null }
 /** Для темы «под музыку» — вспышка на ударе 0..1 (быстро гаснет). */
 val LocalRgbGlow = staticCompositionLocalOf<State<Float>?> { null }
 
+/** Эквалайзер для темы «под музыку»: уровни полос и падающие пики, 0..1. [frame] растёт каждый кадр. */
+class EqState {
+    val bars = FloatArray(com.volna.music.player.BeatMeter.BANDS)
+    val peaks = FloatArray(com.volna.music.player.BeatMeter.BANDS)
+    val frame = androidx.compose.runtime.mutableIntStateOf(0)
+}
+
+val LocalEq = staticCompositionLocalOf<EqState?> { null }
+
 /** Фон приложения: обычный цвет темы или переливающийся градиент RGB. */
 fun Modifier.appBackground(): Modifier = composed {
     val hue = LocalRgbHue.current
     val glow = LocalRgbGlow.current
+    val eq = LocalEq.current
     if (hue == null) {
         background(MaterialTheme.colorScheme.background)
     } else {
         graphicsLayer {}.drawBehind {
             val h = hue.value
-            val g = glow?.value ?: 0f
+            val g = (glow?.value ?: 0f) * (if (eq != null) 0.5f else 1f)
             // на ударе фон вспыхивает ярче, как LED-лента в режиме «музыка»
             drawRect(
                 Brush.linearGradient(
@@ -64,6 +75,41 @@ fun Modifier.appBackground(): Modifier = composed {
                     end = Offset(size.width, size.height),
                 ),
             )
+            if (eq != null) drawEq(eq, h)
+        }
+    }
+}
+
+/**
+ * Эквалайзер у левого края: полосы растут вправо, бас внизу, верха сверху,
+ * у каждой — свой цвет радуги и пиковая метка, которая медленно опадает.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawEq(eq: EqState, hue: Float) {
+    eq.frame.intValue // подписка: перерисовываться каждый кадр
+    val n = eq.bars.size
+    val maxW = minOf(size.width * 0.30f, 90.dp.toPx() * 2.2f)
+    val top = size.height * 0.08f
+    val bottom = size.height * 0.92f
+    val rowH = (bottom - top) / n
+    val barH = rowH * 0.62f
+    val r = androidx.compose.ui.geometry.CornerRadius(barH / 2)
+    val cap = 3.dp.toPx()
+    for (k in 0 until n) {
+        val y = bottom - (k + 1) * rowH + (rowH - barH) / 2
+        val v = eq.bars[k]
+        val c = Color.hsv((hue + k * (300f / n)) % 360f, 0.85f, 1f)
+        // тусклая «дорожка» на всю длину — видно шкалу даже в тишине
+        drawRoundRect(c.copy(alpha = 0.10f), Offset(0f, y), androidx.compose.ui.geometry.Size(maxW, barH), r)
+        if (v > 0.01f) {
+            val w = maxOf(barH, maxW * v)
+            drawRoundRect(
+                Brush.horizontalGradient(listOf(c.copy(alpha = 0.35f), c.copy(alpha = 0.9f)), 0f, w),
+                Offset(0f, y), androidx.compose.ui.geometry.Size(w, barH), r,
+            )
+        }
+        val p = eq.peaks[k]
+        if (p > 0.02f) {
+            drawRect(Color.White.copy(alpha = 0.85f), Offset(maxW * p, y), androidx.compose.ui.geometry.Size(cap, barH))
         }
     }
 }
@@ -181,6 +227,7 @@ private fun BeatTheme(content: @Composable () -> Unit) {
     val hue = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     val glow = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     val slowHue = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val eq = remember { EqState() }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         val meter = com.volna.music.player.BeatMeter
@@ -202,12 +249,21 @@ private fun BeatTheme(content: @Composable () -> Unit) {
                 last = now
 
                 val s = meter.poll(now)
+                // столбики: вверх быстро, вниз плавно; пики держатся и медленно опадают
+                for (k in s.bands.indices) {
+                    val target = s.bands[k]
+                    val cur = eq.bars[k]
+                    eq.bars[k] = if (target > cur) cur + (target - cur) * (dt * 30f).coerceAtMost(1f)
+                    else maxOf(target, cur - dt * 1.6f)
+                    eq.peaks[k] = if (eq.bars[k] >= eq.peaks[k]) eq.bars[k] else maxOf(0f, eq.peaks[k] - dt * 0.35f)
+                }
+                eq.frame.intValue++
                 level += (s.level - level) * (dt * 12f).coerceAtMost(1f)
-                if (s.beats > 0) { pulse = 1f; kick = 220f }
-                pulse = maxOf(pulse - dt * 3.2f, level * 0.45f)
+                if (s.beats > 0) { pulse = 1f; kick = 120f }
+                pulse = maxOf(pulse - dt * 3.2f, level * 0.35f)
                 kick *= exp(-dt * 5f)
 
-                hue.floatValue = (hue.floatValue + dt * (12f + 50f * level + kick)) % 360f
+                hue.floatValue = (hue.floatValue + dt * (10f + 30f * level + kick)) % 360f
                 slowHue.floatValue = (slowHue.floatValue + dt * 15f) % 360f
                 glow.floatValue = pulse
             }
@@ -222,6 +278,7 @@ private fun BeatTheme(content: @Composable () -> Unit) {
         LocalPanelInk provides Color(0xFF101014),
         LocalRgbHue provides hue,
         LocalRgbGlow provides glow,
+        LocalEq provides eq,
     ) {
         MaterialTheme(colorScheme = rgbScheme(step), content = content)
     }
