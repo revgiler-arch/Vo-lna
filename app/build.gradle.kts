@@ -12,8 +12,8 @@ android {
         applicationId = "com.volna.music"
         minSdk = 26
         targetSdk = 35
-        versionCode = 24
-        versionName = "1.17.24"
+        versionCode = 25
+        versionName = "1.18.25"
     }
 
     // Один и тот же ключ для всех сборок: новая версия ставится поверх старой

@@ -19,7 +19,9 @@ import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.volna.music.App
-import com.volna.music.data.Recommender
+import com.volna.music.data.Continuation
+import com.volna.music.data.QueueSource
+import com.volna.music.data.Track
 import com.volna.music.data.Yt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -296,9 +298,12 @@ class PlaybackService : MediaSessionService() {
 
         override fun onPlaybackStateChanged(state: Int) {
             if (state != Player.STATE_ENDED || player.repeatMode != Player.REPEAT_MODE_OFF) return
-            // очередь кончилась: даём радио время догрузиться, иначе сообщаем
+            // таймер сна «после трека» остановил сам — продолжение не нужно
+            if (SleepTimer.endOfTrack.value) return
+            // очередь кончилась: догружаем продолжение; если так и не вышло — сообщаем
+            launchRadio()
             scope.launch {
-                kotlinx.coroutines.delay(10_000)
+                kotlinx.coroutines.delay(35_000)
                 if (player.playbackState == Player.STATE_ENDED) {
                     showStopped("Не удалось загрузить продолжение радио. Нажмите «Продолжить».")
                 }
@@ -330,12 +335,25 @@ class PlaybackService : MediaSessionService() {
         db.finishPlay(row, listened, skipped)
     }
 
-    /** Когда в очереди осталось ≤ 2 трека — дозаливаем радио по текущему. */
+    /** Сколько треков ещё впереди (с учётом «вперемешку»). */
+    private fun remaining(): Int {
+        val tl = player.currentTimeline
+        if (tl.isEmpty) return 0
+        var i = player.currentMediaItemIndex
+        var n = 0
+        while (n < 10) {
+            i = tl.getNextWindowIndex(i, Player.REPEAT_MODE_OFF, player.shuffleModeEnabled)
+            if (i == C.INDEX_UNSET) break
+            n++
+        }
+        return n
+    }
+
+    /** Когда впереди осталось ≤ 3 трека — догружаем продолжение, очередь не кончается. */
     private fun extendRadioIfNeeded() {
         if (player.mediaItemCount == 0) return
         if (player.repeatMode != Player.REPEAT_MODE_OFF) return
-        val left = player.mediaItemCount - 1 - player.currentMediaItemIndex
-        if (left > 2 || radioJob?.isActive == true) return
+        if (remaining() > 3 || radioJob?.isActive == true) return
         launchRadio()
     }
 
@@ -344,18 +362,33 @@ class PlaybackService : MediaSessionService() {
         val seed = player.currentMediaItem?.mediaId ?: return
 
         radioJob = scope.launch {
-            val queued = (0 until player.mediaItemCount)
-                .map { player.getMediaItemAt(it).mediaId }.toSet()
-            val add = withContext(Dispatchers.IO) {
-                val radio = runCatching { Yt.radio(seed) }.getOrDefault(emptyList())
-                Recommender.filterForQueue(db, radio, queued).take(15)
-            }
-            if (add.isNotEmpty()) {
-                player.addMediaItems(add.map(MediaItems::of))
-                if (player.playbackState == Player.STATE_ENDED) {
-                    player.seekToNextMediaItem(); player.prepare(); player.play()
+            var add: List<Track> = emptyList()
+            // до трёх попыток: сеть могла моргнуть, YouTube мог вернуть пусто
+            for (attempt in 0 until 3) {
+                val queued = (0 until player.mediaItemCount)
+                    .map { player.getMediaItemAt(it).mediaId }.toSet()
+                add = withContext(Dispatchers.IO) {
+                    runCatching { Continuation.more(db, seed, queued, attempt) }.getOrDefault(emptyList())
+                        .filter { it.id !in queued }
                 }
+                if (add.isNotEmpty()) break
+                kotlinx.coroutines.delay(4_000L * (attempt + 1))
+            }
+            com.volna.music.Diag.mark(this@PlaybackService, "continue ${QueueSource.mode}: +${add.size}")
+            if (add.isEmpty()) return@launch
+            trimPlayed()
+            val ended = player.playbackState == Player.STATE_ENDED
+            player.addMediaItems(add.map(MediaItems::of))
+            if (ended) {
+                player.seekToNextMediaItem(); player.prepare(); player.play()
             }
         }
+    }
+
+    /** Бесконечная очередь не должна разрастаться: давно сыгранное (кроме последних 100) убираем. */
+    private fun trimPlayed() {
+        if (player.shuffleModeEnabled) return
+        val cur = player.currentMediaItemIndex
+        if (cur > 150) player.removeMediaItems(0, cur - 100)
     }
 }

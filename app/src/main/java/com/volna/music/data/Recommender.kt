@@ -86,6 +86,40 @@ object Recommender {
         }.take(40)
     }
 
+    /**
+     * Следующая порция «Для вас», когда очередь подходит к концу.
+     * Семена — то, что играет сейчас и только что дослушали (лента подстраивается
+     * под текущее настроение), плюс любимое, чтобы не уехать слишком далеко.
+     */
+    suspend fun more(db: MusicDb, current: String, queued: Set<String>): List<Track> {
+        val (seeds, ctx) = withContext(Dispatchers.IO) {
+            val skips = db.skipCounts()
+            val good = db.recent(15).filter { (skips[it.id] ?: 0) <= 0 && it.id != current }
+            val artistW = db.artistWeights(15).toMap()
+            val s = buildList {
+                add(current)
+                addAll(good.take(2).map { it.id })
+                db.liked().shuffled().firstOrNull()?.let { add(it.id) }
+                db.favoritesByPlays(20).shuffled().firstOrNull()?.let { add(it.id) }
+                artistW.keys.take(5).shuffled().firstOrNull()?.let { a ->
+                    db.recent(50).firstOrNull { it.artist == a }?.let { add(it.id) }
+                }
+            }.distinct().take(5)
+            s to Triple(skips, artistW, Pair(db.disliked(), db.playedSince(3 * HOUR)))
+        }
+        val (skips, artistW, dr) = ctx
+        val (disliked, recently) = dr
+        val radios = Continuation.radios(seeds)
+        if (radios.all { it.isEmpty() }) return emptyList()
+        val seedSet = seeds.toSet()
+        return Continuation.rank(
+            radios, artistW,
+            exclude = { it.id in queued || it.id in disliked || it.id in recently || it.id in seedSet || (skips[it.id] ?: 0) >= 2 },
+            penalty = { if ((skips[it.id] ?: 0) > 0) 1.0 else 0.0 },
+            perArtist = 2, limit = 15, noise = 0.6,
+        )
+    }
+
     /** Фильтр для автодобавления в радио во время прослушивания. */
     fun filterForQueue(db: MusicDb, list: List<Track>, inQueue: Set<String>): List<Track> {
         val disliked = db.disliked()

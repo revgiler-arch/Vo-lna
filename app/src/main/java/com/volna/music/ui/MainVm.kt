@@ -17,6 +17,8 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.volna.music.App
 import com.volna.music.data.Recommender
 import com.volna.music.data.MoodRadio
+import com.volna.music.data.QueueMode
+import com.volna.music.data.QueueSource
 import com.volna.music.data.Picks
 import com.volna.music.data.RadioActivity
 import com.volna.music.data.RadioMood
@@ -238,7 +240,8 @@ class MainVm(app: Application) : AndroidViewModel(app) {
                 val list = MoodRadio.tracks(db, a, m)
                 if (list.isEmpty()) toast("Не удалось собрать радио — попробуйте ещё раз")
                 else {
-                    play(list)
+                    QueueSource.set(QueueMode.MOOD, a, m)
+                    play(list, mode = QueueMode.MOOD)
                     toast("Радио: ${MoodRadio.title(a, m)}")
                 }
             } catch (e: Exception) {
@@ -395,9 +398,11 @@ class MainVm(app: Application) : AndroidViewModel(app) {
     // ---------- управление ----------
 
     /** Играть список с позиции; когда он кончится — продолжится радио. */
-    fun play(list: List<Track>, index: Int = 0) {
+    fun play(list: List<Track>, index: Int = 0, mode: QueueMode = QueueMode.RADIO) {
         val c = controller ?: return
         if (list.isEmpty()) return
+        // источник очереди: по нему сервис решает, чем продолжать, когда список кончится
+        if (mode != QueueMode.MOOD) QueueSource.set(mode) // для радио настроения выставляет startMoodRadio
         c.setMediaItems(list.map(MediaItems::of), index.coerceIn(0, list.lastIndex), 0L)
         c.shuffleModeEnabled = false
         c.prepare()

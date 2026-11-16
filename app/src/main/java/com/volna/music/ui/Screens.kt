@@ -1,5 +1,6 @@
 package com.volna.music.ui
 
+import com.volna.music.data.QueueMode
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -194,7 +195,7 @@ private fun HomeList(vm: MainVm, onArtist: (String) -> Unit, theme: AppTheme, on
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    itemsIndexed(vm.picks, key = { _, t -> "pk" + t.id }) { i, t -> RecentCard(t) { vm.play(vm.picks, i) } }
+                    itemsIndexed(vm.picks, key = { _, t -> "pk" + t.id }) { i, t -> RecentCard(t) { vm.play(vm.picks, i, QueueMode.PICKS) } }
                 }
             }
         }
@@ -219,10 +220,10 @@ private fun HomeList(vm: MainVm, onArtist: (String) -> Unit, theme: AppTheme, on
         if (vm.forYou.isNotEmpty()) {
             item {
                 Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { vm.play(vm.forYou) }) {
+                    Button(onClick = { vm.play(vm.forYou, mode = QueueMode.FOR_YOU) }) {
                         Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Слушать")
                     }
-                    FilledTonalButton(onClick = { vm.play(vm.forYou.shuffled()) }) {
+                    FilledTonalButton(onClick = { vm.play(vm.forYou.shuffled(), mode = QueueMode.FOR_YOU) }) {
                         Icon(Icons.Filled.Shuffle, null); Spacer(Modifier.width(6.dp)); Text("Вперемешку")
                     }
                 }
@@ -239,7 +240,7 @@ private fun HomeList(vm: MainVm, onArtist: (String) -> Unit, theme: AppTheme, on
             }
         }
         itemsIndexed(vm.forYou, key = { _, t -> "fy" + t.id }) { i, t ->
-            TrackRow(t, vm, onClick = { vm.play(vm.forYou, i) })
+            TrackRow(t, vm, onClick = { vm.play(vm.forYou, i, QueueMode.FOR_YOU) })
         }
         if (vm.recent.isEmpty() && !vm.homeLoading) {
             item {
