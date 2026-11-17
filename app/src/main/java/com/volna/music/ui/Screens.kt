@@ -534,7 +534,8 @@ private fun YtAccountTab(vm: MainVm) {
         Column(Modifier.fillMaxWidth().padding(24.dp)) {
             Text(
                 "Войдите в Google-аккаунт, чтобы видеть свои лайки и плейлисты из YouTube Music " +
-                    "и получать его персональные подборки. Лайки из «Волны» тоже будут сохраняться в аккаунт.",
+                    "и получать его персональные подборки. Лайки из «Волны» тоже будут сохраняться в аккаунт. " +
+                    "А ещё с аккаунтом YouTube не мешает слушать проверкой «подтвердите, что вы не бот».",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(8.dp))

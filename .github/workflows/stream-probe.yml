@@ -1,0 +1,29 @@
+name: Probe streams
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [stream-probe]
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew && ./gradlew :app:testReleaseUnitTest --tests com.volna.music.StreamProbeTest -i 2>&1 | tail -150 > /tmp/gradle.txt || true
+      - name: Publish
+        if: always()
+        run: |
+          cp app/build/stream-probe.txt /tmp/probe.txt 2>/dev/null || echo "no probe output" > /tmp/probe.txt
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          git checkout --orphan stream-probe-results && git rm -rf -q . && rm -rf .gradle app build 2>/dev/null || true
+          cp /tmp/probe.txt probe.txt && cp /tmp/gradle.txt gradle.txt 2>/dev/null || true
+          git add probe.txt gradle.txt && git commit -q -m probe && git push -f origin stream-probe-results

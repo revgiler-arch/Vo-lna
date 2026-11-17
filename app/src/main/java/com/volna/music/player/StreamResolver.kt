@@ -34,7 +34,7 @@ object StreamResolver : ResolvingDataSource.Resolver {
 
     /** Некоторые ссылки YouTube отдаёт только «своему» клиенту — подставляем нужный User-Agent. */
     fun userAgentFor(url: String): String =
-        if (YoutubeParsingHelper.isVisionOsStreamingUrl(url)) {
+        com.volna.music.data.YtFallback.userAgentFor(url) ?: if (YoutubeParsingHelper.isVisionOsStreamingUrl(url)) {
             YoutubeParsingHelper.getVisionOsUserAgent(null)
         } else {
             OkDownloader.USER_AGENT

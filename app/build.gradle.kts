@@ -99,4 +99,6 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
 
     testImplementation("junit:junit:4.13.2")
+    // настоящий org.json для тестов на компьютере (в android.jar только заглушки)
+    testImplementation("org.json:json:20240303")
 }

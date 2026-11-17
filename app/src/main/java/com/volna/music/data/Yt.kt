@@ -95,14 +95,54 @@ object Yt {
     /** Ссылки протухли или не играют — в следующий раз спросим YouTube заново. */
     fun forget(id: String) {
         infoCache.remove(id)
+        YtFallback.forget(id)
+    }
+
+    /**
+     * Сначала основной путь (NewPipeExtractor). Если YouTube просит «подтвердить, что не бот»
+     * (или основной клиент сломался), берём ссылку запасным путём [YtFallback].
+     * После проверки на бота полчаса сразу идём запасным путём — так быстрее.
+     */
+    private fun <T> withFallback(id: String, main: (StreamInfo) -> T, fallback: (YtFallback.Streams) -> T?): T {
+        if (YtFallback.preferred) {
+            runCatching { YtFallback.streams(id) }.getOrNull()?.let(fallback)?.let { return it }
+        }
+        return try {
+            main(streamInfo(id))
+        } catch (e: Exception) {
+            if (!worthFallback(e)) throw e
+            if (com.volna.music.ui.isBotBlock(e)) YtFallback.markBlocked()
+            val alt = try {
+                fallback(YtFallback.streams(id))
+            } catch (f: Exception) {
+                e.addSuppressed(f)
+                null
+            }
+            alt ?: throw e
+        }
+    }
+
+    private fun worthFallback(e: Throwable): Boolean {
+        var t: Throwable? = e
+        while (t != null) {
+            when (t) {
+                is org.schabi.newpipe.extractor.exceptions.AgeRestrictedContentException -> return true
+                // удалено, приватное, недоступно в стране — другой клиент не поможет
+                is org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException -> return false
+            }
+            val c = t.cause
+            t = if (c === t) null else c
+        }
+        return true
     }
 
     /**
      * Ссылка на видео к треку (без звука — звук играет основной плеер) или null, если видео нет.
      * Берём MP4 (H.264) не выше 480p: его тянет любое устройство, включая магнитолу. Блокирующий вызов.
      */
-    fun resolveVideoUrl(id: String): String? {
-        val info = streamInfo(id)
+    fun resolveVideoUrl(id: String): String? = withFallback(id, ::videoFrom) { it.video }
+
+    private fun videoFrom(info: StreamInfo): String? {
         fun VideoStream.h(): Int = height.takeIf { it > 0 }
             ?: resolution.takeWhile { it.isDigit() }.toIntOrNull() ?: 0
         val only = info.videoOnlyStreams.filter {
@@ -143,8 +183,10 @@ object Yt {
     }
 
     /** Прямая ссылка на лучший аудиопоток. Блокирующий вызов. */
-    fun resolveAudioUrl(id: String): String {
-        val info = streamInfo(id)
+    fun resolveAudioUrl(id: String): String = withFallback(id, ::audioFrom) { it.audio }
+
+    private fun audioFrom(info: StreamInfo): String {
+        val id = info.id
         val candidates = info.audioStreams.filter {
             it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP &&
                 (it.audioTrackType == null || it.audioTrackType == AudioTrackType.ORIGINAL)

@@ -61,12 +61,24 @@ object YtAccount {
         ?.firstOrNull { it.startsWith("SAPISID=") || it.startsWith("__Secure-3PAPISID=") }
         ?.substringAfter("=")
 
-    private fun authHeader(c: String): String {
+    private fun authHeader(c: String, origin: String = ORIGIN): String {
         val ts = System.currentTimeMillis() / 1000
-        val raw = "$ts ${sapisid(c)} $ORIGIN"
+        val raw = "$ts ${sapisid(c)} $origin"
         val hash = MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
             .joinToString("") { "%02x".format(it) }
         return "SAPISIDHASH ${ts}_$hash"
+    }
+
+    /** Заголовки входа для запросов к YouTube от вашего имени; null — если вы не вошли. */
+    fun authHeaders(origin: String): Map<String, String>? {
+        val c = cookie ?: return null
+        if (sapisid(c) == null) return null
+        return mapOf(
+            "Cookie" to c,
+            "Authorization" to authHeader(c, origin),
+            "X-Goog-AuthUser" to "0",
+            "X-Origin" to origin,
+        )
     }
 
     private fun post(endpoint: String, body: JSONObject = JSONObject()): JSONObject {

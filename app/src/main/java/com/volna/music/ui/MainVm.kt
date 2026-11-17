@@ -885,8 +885,13 @@ fun describeError(e: Throwable): String {
     while (root.cause != null && root.cause !== root) root = root.cause!!
     val human = when {
         isBotBlock(e) ->
-            "YouTube просит подтвердить, что вы не бот, — так бывает с VPN, некоторыми мобильными " +
-                "операторами и серверами. Выключите VPN или смените сеть (Wi‑Fi ↔ мобильный интернет)."
+            if (com.volna.music.data.YtAccount.isLoggedIn) {
+                "YouTube просит подтвердить, что вы не бот, — так бывает с VPN и мобильным интернетом. " +
+                    "Смените сеть (Wi‑Fi ↔ мобильный интернет) или подождите пару минут."
+            } else {
+                "YouTube просит подтвердить, что вы не бот, — так бывает с VPN и мобильным интернетом. " +
+                    "Помогает вход в Google: Библиотека → YouTube → «Войти через Google». Или смените сеть."
+            }
         e is org.schabi.newpipe.extractor.exceptions.ReCaptchaException ||
             root is org.schabi.newpipe.extractor.exceptions.ReCaptchaException ->
             "YouTube временно ограничил запросы с этого IP (так бывает с мобильным интернетом и VPN). " +
