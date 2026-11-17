@@ -861,6 +861,9 @@ class MainVm(app: Application) : AndroidViewModel(app) {
             history = withContext(Dispatchers.IO) { db.recent(200) }
             liked = withContext(Dispatchers.IO) { db.liked() }
             recentSearches = withContext(Dispatchers.IO) { db.recentSearches(12) }
+            // свои плейлисты: раньше грузились только с экрана поиска — после сохранения
+            // и при запуске вкладка «Плейлисты» оставалась пустой
+            playlists = withContext(Dispatchers.IO) { db.playlists() }
         }
     }
 
