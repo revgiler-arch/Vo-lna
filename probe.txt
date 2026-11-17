@@ -1,0 +1,12 @@
+7wtfhZwyrcc | main(visionOS) | EXC ParsingException: Got HTML document, expected JSON response (latest url was: "https://youtubei.googleapis.com/youtubei/v1/player?prettyPrint=false&t=ItIdxqEsoFPN&id=7wtfhZwyrcc")
+7wtfhZwyrcc | fallback | EXC Запасные клиенты тоже не смогли: tv: HTTP 403; vr: HTTP 403
+7wtfhZwyrcc | report | 7wtfhZwyrcc: tv: HTTP 403; vr: HTTP 403
+7wtfhZwyrcc | resolveAudioUrl | EXC Got HTML document, expected JSON response (latest url was: "https://youtubei.googleapis.com/youtubei/v1/player?prettyPrint=false&t=mXZmUvtgY9jM&id=7wtfhZwyrcc")
+kJQP7kiw5Fk | main(visionOS) | EXC ParsingException: Got HTML document, expected JSON response (latest url was: "https://youtubei.googleapis.com/youtubei/v1/player?prettyPrint=false&t=1nw4a0_cYcds&id=kJQP7kiw5Fk")
+kJQP7kiw5Fk | fallback | EXC Запасные клиенты тоже не смогли: tv: HTTP 403; vr: HTTP 403
+kJQP7kiw5Fk | report | kJQP7kiw5Fk: tv: HTTP 403; vr: HTTP 403
+kJQP7kiw5Fk | resolveAudioUrl | EXC Got HTML document, expected JSON response (latest url was: "https://youtubei.googleapis.com/youtubei/v1/player?prettyPrint=false&t=VharL15w9E56&id=kJQP7kiw5Fk")
+dQw4w9WgXcQ | main(visionOS) | EXC ParsingException: Got HTML document, expected JSON response (latest url was: "https://youtubei.googleapis.com/youtubei/v1/player?prettyPrint=false&t=uuDniEJRIT7j&id=dQw4w9WgXcQ")
+dQw4w9WgXcQ | fallback | EXC Запасные клиенты тоже не смогли: tv: HTTP 403; vr: HTTP 403
+dQw4w9WgXcQ | report | dQw4w9WgXcQ: tv: HTTP 403; vr: HTTP 403
+dQw4w9WgXcQ | resolveAudioUrl | EXC Got HTML document, expected JSON response (latest url was: "https://youtubei.googleapis.com/youtubei/v1/player?prettyPrint=false&t=Ic_5-u81kLxa&id=dQw4w9WgXcQ")
