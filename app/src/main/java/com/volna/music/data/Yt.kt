@@ -24,6 +24,22 @@ object Yt {
 
     fun watchUrl(id: String) = "https://www.youtube.com/watch?v=$id"
 
+    /**
+     * Поиск для экрана «Поиск»: сначала песни YouTube Music, затем обычные видео YouTube.
+     * Раздел «Песни» не содержит то, что залито как обычное видео (музыка нейросетей, каверы,
+     * ремиксы, живые записи) — такие треки находятся только через видео-поиск.
+     */
+    suspend fun searchMixed(query: String): List<Track> = withContext(Dispatchers.IO) {
+        val songs = runCatching { searchSongs(query) }
+        val videos = runCatching {
+            val qh = yt.searchQHFactory.fromQuery(query, listOf(YoutubeSearchQueryHandlerFactory.VIDEOS), "")
+            SearchInfo.getInfo(yt, qh).relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull(::toTrack)
+        }
+        val merged = (songs.getOrDefault(emptyList()) + videos.getOrDefault(emptyList())).distinctBy { it.id }
+        if (merged.isEmpty()) songs.exceptionOrNull()?.let { throw it }
+        merged
+    }
+
     /** Поиск песен в разделе YouTube Music. */
     suspend fun searchSongs(query: String): List<Track> = withContext(Dispatchers.IO) {
         val qh = yt.searchQHFactory.fromQuery(

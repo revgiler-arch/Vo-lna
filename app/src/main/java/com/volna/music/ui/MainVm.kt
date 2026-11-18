@@ -585,7 +585,7 @@ class MainVm(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) { db.addSearch(text) }
-                results = Yt.searchSongs(text)
+                results = Yt.searchMixed(text)
                 if (results.isEmpty()) searchError = "Ничего не найдено\n\n[${Yt.lastDiagnostics ?: "-"}]"
             } catch (e: Exception) {
                 searchError = describeError(e)
