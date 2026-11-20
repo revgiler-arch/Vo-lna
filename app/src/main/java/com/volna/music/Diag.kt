@@ -18,8 +18,26 @@ object Diag {
     var previousRun: String? = null
         private set
 
+    /** Как на самом деле завершился прошлый процесс (Android 11+): true — упал/завис, false — закрыт системой. */
+    private var lastExitBad: Boolean? = null
+
     fun begin(ctx: Context) {
         previousRun = runCatching { file(ctx).takeIf { it.exists() }?.readText() }.getOrNull()
+        if (previousRun != null && android.os.Build.VERSION.SDK_INT >= 30) {
+            runCatching {
+                val am = ctx.getSystemService(android.app.ActivityManager::class.java)
+                val info = am?.getHistoricalProcessExitReasons(null, 0, 1)?.firstOrNull()
+                if (info != null) {
+                    val r = info.reason
+                    lastExitBad = r == android.app.ApplicationExitInfo.REASON_CRASH ||
+                        r == android.app.ApplicationExitInfo.REASON_CRASH_NATIVE ||
+                        r == android.app.ApplicationExitInfo.REASON_ANR ||
+                        r == android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE
+                    previousRun += "Как завершился: ${reasonName(r)}" +
+                        (info.description?.let { " ($it)" } ?: "") + "\n"
+                }
+            }
+        }
         runCatching {
             file(ctx).writeText(
                 "Волна ${BuildConfigInfo.version(ctx)} · ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}" +
@@ -38,6 +56,27 @@ object Diag {
     /** Прошлый запуск оборвался до того, как интерфейс нормально поработал. */
     fun previousFailed(): Boolean {
         val p = previousRun ?: return false
-        return !p.contains("ui:ok")
+        if (p.contains("ui:ok")) return false
+        lastExitBad?.let { return it }
+        // Android 10 и старее: ошибка — только если записано падение или не открылся экран.
+        // Запуск одного фонового плеера (шторка, Bluetooth, машина), который система потом
+        // закрыла, ошибкой не считаем.
+        return p.contains("CRASH") || p.contains("activity:create")
+    }
+
+    private fun reasonName(r: Int): String = when (r) {
+        android.app.ApplicationExitInfo.REASON_CRASH -> "падение"
+        android.app.ApplicationExitInfo.REASON_CRASH_NATIVE -> "падение (нативное)"
+        android.app.ApplicationExitInfo.REASON_ANR -> "зависание (ANR)"
+        android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "ошибка запуска"
+        android.app.ApplicationExitInfo.REASON_LOW_MEMORY -> "закрыт системой — мало памяти"
+        android.app.ApplicationExitInfo.REASON_USER_REQUESTED -> "закрыт пользователем"
+        android.app.ApplicationExitInfo.REASON_USER_STOPPED -> "остановлен пользователем"
+        android.app.ApplicationExitInfo.REASON_EXIT_SELF -> "завершился сам"
+        android.app.ApplicationExitInfo.REASON_SIGNALED -> "остановлен системой"
+        android.app.ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "закрыт системой — много ресурсов"
+        android.app.ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "изменены разрешения"
+        android.app.ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "закрыт вместе с зависимостью"
+        else -> "закрыт системой (код $r)"
     }
 }
