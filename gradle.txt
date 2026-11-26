@@ -1,0 +1,150 @@
+Downloading https://repo.maven.apache.org/maven2/org/hamcrest/hamcrest-parent/1.3/hamcrest-parent-1.3.pom to /home/runner/.gradle/.tmp/gradle_download10169640832213221152bin
+Downloading https://repo.maven.apache.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar to /home/runner/.gradle/.tmp/gradle_download10056076849024566123bin
+Downloading https://repo.maven.apache.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar to /home/runner/.gradle/.tmp/gradle_download4527572447575726677bin
+Downloading https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar to /home/runner/.gradle/.tmp/gradle_download10256986148623671207bin
+Caching disabled for IdentityTransform: /home/runner/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-core/1.3/42a25dc3219429f0e5d060061f71acb49bf010a0/hamcrest-core-1.3.jar because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for IdentityTransform: /home/runner/.gradle/caches/modules-2/files-2.1/org.json/json/20240303/ebb88e8fb5122b7506d5cf1d69f1ccdb790d22a/json-20240303.jar because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for IdentityTransform: /home/runner/.gradle/caches/modules-2/files-2.1/junit/junit/4.13.2/8ac9e16d933b6fb43bc7f576336b8f4d7eb5ba12/junit-4.13.2.jar because:
+  Build cache is disabled
+  Caching not enabled.
+Caching disabled for BuildToolsApiClasspathEntrySnapshotTransform: /home/runner/.gradle/caches/modules-2/files-2.1/org.json/json/20240303/ebb88e8fb5122b7506d5cf1d69f1ccdb790d22a/json-20240303.jar because:
+  Build cache is disabled
+Caching disabled for BuildToolsApiClasspathEntrySnapshotTransform: /home/runner/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-core/1.3/42a25dc3219429f0e5d060061f71acb49bf010a0/hamcrest-core-1.3.jar because:
+  Build cache is disabled
+Caching disabled for BuildToolsApiClasspathEntrySnapshotTransform: /home/runner/.gradle/caches/modules-2/files-2.1/junit/junit/4.13.2/8ac9e16d933b6fb43bc7f576336b8f4d7eb5ba12/junit-4.13.2.jar because:
+  Build cache is disabled
+Caching disabled for BuildToolsApiClasspathEntrySnapshotTransform: /home/runner/work/Vo-lna/Vo-lna/app/build/intermediates/compile_app_classes_jar/release/bundleReleaseClassesToCompileJar/classes.jar because:
+  Build cache is disabled
+Caching disabled for task ':app:compileReleaseUnitTestKotlin' because:
+  Build cache is disabled
+Task ':app:compileReleaseUnitTestKotlin' is not up-to-date because:
+  No history is available.
+The input changes require a full rebuild for incremental task ':app:compileReleaseUnitTestKotlin'.
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/releaseUnitTest/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/releaseUnitTest/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/releaseUnitTest/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/releaseUnitTest/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/releaseUnitTest/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/kotlin', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/java', not found
+Kotlin source files: /home/runner/work/Vo-lna/Vo-lna/app/src/test/java/com/volna/music/ProbeTest.kt, /home/runner/work/Vo-lna/Vo-lna/app/src/test/java/com/volna/music/ArtistsProbeTest.kt, /home/runner/work/Vo-lna/Vo-lna/app/src/test/java/com/volna/music/StreamProbeTest.kt
+Java source files: 
+Script source files: 
+Script file extensions: 
+Using Kotlin/JVM incremental compilation
+[KOTLIN] Kotlin compilation 'jdkHome' argument: null
+Options for KOTLIN DAEMON: IncrementalCompilationOptions(super=CompilationOptions(compilerMode=INCREMENTAL_COMPILER, targetPlatform=JVM, reportCategories=[0, 3], reportSeverity=2, requestedCompilationResults=[0], kotlinScriptExtensions=[]), areFileChangesKnown=false, modifiedFiles=null, deletedFiles=null, classpathChanges=NotAvailableForNonIncrementalRun, workingDir=/home/runner/work/Vo-lna/Vo-lna/app/build/kotlin/compileReleaseUnitTestKotlin/cacheable, multiModuleICSettings=MultiModuleICSettings(buildHistoryFile=/home/runner/work/Vo-lna/Vo-lna/app/build/kotlin/compileReleaseUnitTestKotlin/local-state/build-history.bin, useModuleDetection=true), usePreciseJavaTracking=true, icFeatures=IncrementalCompilationFeatures(withAbiSnapshot=false, preciseCompilationResultsBackup=true, keepIncrementalCompilationCachesInMemory=true, enableUnsafeIncrementalCompilationForMultiplatform=false), outputFiles=[/home/runner/work/Vo-lna/Vo-lna/app/build/tmp/kotlin-classes/releaseUnitTest, /home/runner/work/Vo-lna/Vo-lna/app/build/kotlin/compileReleaseUnitTestKotlin/cacheable, /home/runner/work/Vo-lna/Vo-lna/app/build/kotlin/compileReleaseUnitTestKotlin/local-state])
+Finished executing kotlin compiler using DAEMON strategy
+Resolve mutations for :app:compileReleaseUnitTestJavaWithJavac (Thread[included builds,5,main]) started.
+:app:compileReleaseUnitTestJavaWithJavac (Thread[included builds,5,main]) started.
+
+> Task :app:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+Skipping task ':app:compileReleaseUnitTestJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :app:processReleaseUnitTestJavaRes (Thread[included builds,5,main]) started.
+:app:processReleaseUnitTestJavaRes (Thread[included builds,5,main]) started.
+
+> Task :app:processReleaseUnitTestJavaRes
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/resources', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/resources', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/resources', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/resources', not found
+Caching disabled for task ':app:processReleaseUnitTestJavaRes' because:
+  Build cache is disabled
+  Caching has been disabled for the task
+Task ':app:processReleaseUnitTestJavaRes' is not up-to-date because:
+  No history is available.
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/resources', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/resources', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/test/resources', not found
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/resources', not found
+Resolve mutations for :app:testReleaseUnitTest (Thread[included builds,5,main]) started.
+:app:testReleaseUnitTest (Thread[included builds,5,main]) started.
+
+> Task :app:testReleaseUnitTest
+Caching disabled for MockableJarTransform: /usr/local/lib/android/sdk/platforms/android-35/android.jar because:
+  Build cache is disabled
+Calling mockable JAR artifact transform to create file: /home/runner/.gradle/caches/8.14.3/transforms/6430de267c7fa3c06d1c3af1e95d27a8-c9cf882b-3379-4ede-bcf9-cde4f06e963b/transformed/android.jar with input /usr/local/lib/android/sdk/platforms/android-35/android.jar
+Caching disabled for task ':app:testReleaseUnitTest' because:
+  Build cache is disabled
+Task ':app:testReleaseUnitTest' is not up-to-date because:
+  No history is available.
+file or directory '/home/runner/work/Vo-lna/Vo-lna/app/build/intermediates/javac/releaseUnitTest/compileReleaseUnitTestJavaWithJavac/classes', not found
+Starting process 'Gradle Test Executor 1'. Working directory: /home/runner/work/Vo-lna/Vo-lna/app Command: /usr/lib/jvm/temurin-17-jdk-amd64/bin/java -Djava.awt.headless=true -Djava.library.path=/usr/java/packages/lib:/usr/lib64:/lib64:/lib:/usr/lib:/home/runner/work/Vo-lna/Vo-lna/app/src/testRelease/jniLibs:/home/runner/work/Vo-lna/Vo-lna/app/src/test/jniLibs -Dorg.gradle.internal.worker.tmpdir=/home/runner/work/Vo-lna/Vo-lna/app/build/tmp/testReleaseUnitTest/work --add-opens=java.base/java.io=ALL-UNNAMED @/home/runner/.gradle/.tmp/gradle-worker-classpath6630229395930002414txt -Xmx512m -Dfile.encoding=UTF-8 -Duser.country -Duser.language=en -Duser.variant -ea worker.org.gradle.process.internal.worker.GradleWorkerMain 'Gradle Test Executor 1'
+Successfully started process 'Gradle Test Executor 1'
+
+Gradle Test Executor 1 started executing tests.
+Gradle Test Executor 1 finished executing tests.
+
+> Task :app:testReleaseUnitTest
+
+ArtistsProbeTest > probe STANDARD_OUT
+    candidates: [MATRANG, Koala production] [Jah Khalib] [Miyagi]
+    search стима: STIM [308000], ST1M [158000], Steam [0], stim [25], Steam [3270], Steam Down [2150]
+    search стим: ST1M [158000], Андрей Стим [1], Stim Axel [1020], Steam [10]
+    search Стим рэп: ST1M [158000], Lil Stim [2], Billy Milligan [177000], Team Steam [24], Steam & Co. [2], Steam Down [2150]
+    стима → ST1M (UCkc9j96YMmrUbwh7oRmvarw) | page=ST1M songs=24 примеры: ST1M – Бой с тенью (feat. Сацура) (feat. Сацура), ST1M – Я - рэп (feat. SERYOGA), ST1M – Достучаться до небес | похожие: Капа, ST, Лигалайз, Johnyboy, Карандаш, NTL, iOSTRA, Dino MC 47, Ю.Г., Slame
+    Земфира → Земфира (UCtLrP5nolWFZtT6z8y80uQw) | page=Земфира songs=25 примеры: Земфира – ИСКАЛА, Земфира – ХОЧЕШЬ?, Земфира – П.М.М.Л. | похожие: Кино, Palina, Найк Борзов, Дельфин, Animal ДжаZ, Вячеслав Бутусов, Сироткин, Сплин, ДДТ, Ляпис Трубецкой
+    skillet → Skillet (UCUHYrf3BF5yI9QdRw09__BA) | page=Skillet songs=25 примеры: Skillet – Monster, Skillet – Hero, Skillet – The Resistance | похожие: All Good Things, Джен Леджер, Fivefold, Downplay, The Wreckage, Fireflight, Disciple, Nine Lashes, Smash Into Pieces, Youth Never Dies
+    гуф → Guf (UCfsg3NNK0eN_cxWxegU8ZEg) | page=Гуф songs=25 примеры: ГУФ – Письмо домой, Гуф, A.V.G – Спонсор твоих проблем, Баста, Гуф – As It Is | похожие: Витя АК, CENTR, ВесЪ, Murovei, VibeTGK, Ноггано, АрХангел, Восточный Округ, Легенды Про…, Честный
+    Jah Khalib → Jah Khalib (UCrcX-j7HesOS5pLVrnaXluQ) | page=Jah Khalib songs=16 примеры: HammAli, Navai, Jah Khalib – Боже, как завидую, Jah Khalib – Доча, Jah Khalib – Колыбельная | похожие: PIZZA, HOMIE, Джиган, Мияги, Миша Марвин, LUCAVEROS, Баста, L’One, Andro, DONI
+    MATRANG → MATRANG (UCw-px27byDu8nGz2-7FHB2g) | page=MATRANG songs=6 примеры: MATRANG – Медуза, MATRANG – Но забудь, MATRANG – Заманчивая | похожие: HOMIE, Ноггано, Luxor, RSAC, Mania, Каспийский груз, Мальбэк, 9 Грамм, TumaniYO, Неизвестность
+    грустные песни → грустные песни (UCFKqJiLcCttre7hzSEBzlyA) | page=грустные песни songs=15 примеры: грустный лофи, грустная музыка, грустные песни – Вечер на плато, СКРИПИЧНЫЙ, Романтический музыкальный опыт – Анданте, СКРИПИЧНЫЙ, Романтический музыкальный опыт – Канон | похожие: 
+
+Finished generating test XML results (0.004 secs) into: /home/runner/work/Vo-lna/Vo-lna/app/build/test-results/testReleaseUnitTest
+Generating HTML test report...
+Finished generating test html results (0.026 secs) into: /home/runner/work/Vo-lna/Vo-lna/app/build/reports/tests/testReleaseUnitTest
+AAPT2 aapt2-8.7.3-12006047-linux Daemon #0: shutdown
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run-1795714784702.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/Vo-lna/Vo-lna/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 2s
+23 actionable tasks: 23 executed
+dependencies-accessors (/home/runner/.gradle/caches/8.14.3/dependencies-accessors) removing files not accessed on or after Thu Nov 19 17:40:39 UTC 2026.
+dependencies-accessors (/home/runner/.gradle/caches/8.14.3/dependencies-accessors) cleanup deleted 0 files/directories.
+dependencies-accessors (/home/runner/.gradle/caches/8.14.3/dependencies-accessors) cleaned up in 0.002 secs.
