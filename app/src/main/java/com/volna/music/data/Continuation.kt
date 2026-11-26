@@ -67,9 +67,23 @@ object Continuation {
         return fallback(db, seed, queued, attempt)
     }
 
-    private suspend fun radioMore(db: MusicDb, seed: String, queued: Set<String>): List<Track> {
-        val radio = Yt.radio(seed)
-        return withContext(Dispatchers.IO) { Recommender.filterForQueue(db, radio, queued).take(15) }
+    /**
+     * После песни из поиска/плейлиста: радио YouTube по треку пополам с песнями похожих
+     * исполнителей — чтобы не крутилось одно и то же.
+     */
+    private suspend fun radioMore(db: MusicDb, seed: String, queued: Set<String>): List<Track> = coroutineScope {
+        val (disliked, skips, recently) = withContext(Dispatchers.IO) {
+            Triple(db.disliked(), db.skipCounts(), db.playedSince(3 * HOUR))
+        }
+        val exclude = { t: Track ->
+            t.id in queued || t.id in disliked || t.id in recently || (skips[t.id] ?: 0) >= 2
+        }
+        val radio = async { runCatching { Yt.radio(seed) }.getOrDefault(emptyList()).filterNot(exclude).take(8) }
+        val similar = async {
+            runCatching { Recommender.similarToTrack(db, seed, exclude, artists = 4, perArtist = 2) }
+                .getOrDefault(emptyList())
+        }
+        Recommender.interleave(listOf(radio.await(), similar.await()), perArtist = 2, limit = 15)
     }
 
     private suspend fun moodMore(db: MusicDb, queued: Set<String>): List<Track> {

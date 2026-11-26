@@ -69,63 +69,65 @@ object MoodRadio {
     }
 }
 
-/** «Рекомендуем»: новые для вас песни любимых исполнителей — то, что вы ещё не слушали. */
+/**
+ * «Рекомендуем»: то, что вы ещё не слушали, — новые песни любимых исполнителей
+ * и песни похожих на них исполнителей (их больше: цель — открыть новое).
+ */
 object Picks {
-    suspend fun forYou(db: MusicDb, fallback: List<Track>): List<Track> {
-        val artists = withContext(Dispatchers.IO) { db.artistWeights(6).map { it.first } }
-            .filter { it.isNotBlank() }.take(4)
-        if (artists.isEmpty()) return fallback.take(15)
-        val (heard, disliked) = withContext(Dispatchers.IO) { db.heardIds() to db.disliked() }
-        val lists = coroutineScope {
-            artists.map { a ->
-                async {
-                    runCatching { Yt.searchSongs(a) }.getOrDefault(emptyList())
-                        .filter { it.artist.equals(a, ignoreCase = true) && it.id !in heard && it.id !in disliked }
-                        .take(6)
-                }
-            }.awaitAll()
+    /** Песни исполнителя: со страницы YouTube Music, иначе — поиском по имени. */
+    private suspend fun songsOf(name: String, sample: Track?): List<Track> {
+        val ref = sample?.let { Artists.of(it) } ?: Artists.lookup(name)
+        ref?.let { Artists.page(it) }?.songs?.takeIf { it.isNotEmpty() }?.let { return it }
+        return runCatching { Yt.searchSongs(name) }.getOrDefault(emptyList())
+            .filter { Artists.sameName(Artists.primary(it), name) }
+    }
+
+    private suspend fun build(db: MusicDb, exclude: Set<String>, favorites: Int, similarN: Int, limit: Int): List<Track> {
+        val (taste, heard, disliked) = withContext(Dispatchers.IO) {
+            Triple(Recommender.taste(db), db.heardIds(), db.disliked())
         }
-        // по очереди от каждого исполнителя, чтобы ряд был разнообразным
-        val mixed = buildList {
-            val max = lists.maxOfOrNull { it.size } ?: 0
-            for (i in 0 until max) lists.forEach { l -> l.getOrNull(i)?.let(::add) }
-        }.distinctBy { it.id }
-        return (mixed + fallback.filter { it.id !in heard }).distinctBy { it.id }.take(20)
+        fun fresh(t: Track) = t.id !in heard && t.id !in disliked && t.id !in exclude
+        val keys = Recommender.pick(taste.weights.take(20), favorites)
+        if (keys.isEmpty()) return emptyList()
+        return coroutineScope {
+            val favLists = keys.map { k ->
+                async {
+                    songsOf(taste.names[k] ?: return@async emptyList<Track>(), taste.sample[k])
+                        .filter(::fresh).take(8).shuffled().take(3)
+                }
+            }
+            // похожие на любимых — только незнакомые исполнители
+            val simLists = async {
+                val refs = keys.mapNotNull { k ->
+                    taste.sample[k]?.let { Artists.of(it) } ?: taste.names[k]?.let { Artists.lookup(it) }
+                }
+                val pages = Artists.pages(refs)
+                val seen = refs.map { it.id }.toSet()
+                val candidates = pages.flatMap { p -> p.similar.take(10) }
+                    .filter { it.id !in seen && Artists.norm(it.name) !in taste.keys }
+                    .groupBy { it.id }.map { (_, l) -> l.first() to l.size.toDouble() }
+                Artists.pages(Recommender.pick(candidates, similarN))
+                    .map { p -> p.songs.filter(::fresh).take(8).shuffled().take(2) }
+            }
+            val lists = favLists.awaitAll() + simLists.await()
+            Recommender.interleave(lists.shuffled(), perArtist = 3, limit = limit)
+        }
+    }
+
+    suspend fun forYou(db: MusicDb, fallback: List<Track>): List<Track> {
+        val list = runCatching { build(db, emptySet(), favorites = 4, similarN = 6, limit = 20) }
+            .getOrDefault(emptyList())
+        if (list.size >= 6) return list
+        val heard = withContext(Dispatchers.IO) { db.heardIds() }
+        return (list + fallback.filter { it.id !in heard }).distinctBy { it.id }.take(20)
             .ifEmpty { fallback.take(15) }
     }
 
-    /**
-     * Следующая порция «Рекомендуем»: каждый раз другие любимые исполнители
-     * (случайно, с учётом веса) и похожие на то, что играет, — только ещё не слышанное.
-     */
+    /** Следующая порция «Рекомендуем»: каждый раз другие исполнители — только ещё не слышанное. */
     suspend fun more(db: MusicDb, current: String, queued: Set<String>): List<Track> {
-        val (weights, heard, disliked) = withContext(Dispatchers.IO) {
-            Triple(db.artistWeights(20).filter { it.first.isNotBlank() }, db.heardIds(), db.disliked())
-        }
-        fun fresh(t: Track) = t.id !in heard && t.id !in disliked && t.id !in queued
-        // взвешенный случайный выбор трёх исполнителей
-        val artists = weights
-            .map { (a, w) -> a to Math.random() * (w + 1.0) }
-            .sortedByDescending { it.second }
-            .take(3).map { it.first }
-        val (byArtist, similar) = coroutineScope {
-            val a = artists.map { name ->
-                async {
-                    runCatching { Yt.searchSongs(name) }.getOrDefault(emptyList())
-                        .filter { it.artist.equals(name, ignoreCase = true) && fresh(it) }
-                        .shuffled().take(4)
-                }
-            }
-            val r = async { runCatching { Yt.radio(current) }.getOrDefault(emptyList()).filter(::fresh).take(6) }
-            a.awaitAll() to r.await()
-        }
-        val lists = byArtist + listOf(similar)
-        val mixed = buildList {
-            val max = lists.maxOfOrNull { it.size } ?: 0
-            for (i in 0 until max) lists.forEach { l -> l.getOrNull(i)?.let(::add) }
-        }.distinctBy { it.id }
-        // мало нового — добираем подборкой «Для вас»
-        return if (mixed.size >= 4) mixed.take(15)
-        else (mixed + Recommender.more(db, current, queued + mixed.map { it.id }.toSet())).distinctBy { it.id }.take(15)
+        val list = runCatching { build(db, queued, favorites = 3, similarN = 5, limit = 15) }
+            .getOrDefault(emptyList())
+        return if (list.size >= 4) list
+        else (list + Recommender.more(db, current, queued + list.map { it.id }.toSet())).distinctBy { it.id }.take(15)
     }
 }

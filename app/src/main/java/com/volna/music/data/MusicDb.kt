@@ -170,6 +170,23 @@ class MusicDb(context: Context) : SQLiteOpenHelper(context, "volna.db", null, 2)
             null,
         ).use { c -> buildList { while (c.moveToNext()) add(c.getString(0) to c.getDouble(1)) } }
 
+    /** Трек по id (если он уже играл или сохранён). */
+    fun track(vid: String): Track? = tracks(
+        "SELECT vid,title,artist,artist_url,thumb,duration FROM tracks WHERE vid=?", vid,
+    ).firstOrNull()
+
+    /** Последние прослушивания: трек, когда, пропущен ли — для «вкуса» по исполнителям. */
+    fun playLog(limit: Int = 600): List<Triple<Track, Long, Boolean>> =
+        readableDatabase.rawQuery(
+            """SELECT t.vid,t.title,t.artist,t.artist_url,t.thumb,t.duration,p.at,p.skipped
+               FROM plays p JOIN tracks t ON t.vid=p.vid ORDER BY p.at DESC LIMIT $limit""",
+            null,
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) add(Triple(c.track(), c.getLong(6), c.getInt(7) != 0))
+            }
+        }
+
     /** Сколько раз трек пропускали в первые секунды. */
     fun skipCounts(): Map<String, Int> =
         readableDatabase.rawQuery(
