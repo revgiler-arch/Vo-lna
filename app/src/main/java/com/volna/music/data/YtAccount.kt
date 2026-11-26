@@ -20,6 +20,10 @@ import java.util.concurrent.TimeUnit
 
 class AuthExpiredException : IOException("Сессия Google истекла — войдите в аккаунт заново")
 
+data class ArtistRef(val name: String, val id: String)
+
+class ArtistPage(val ref: ArtistRef, val songs: List<Track>, val similar: List<ArtistRef>)
+
 data class YtPlaylist(val browseId: String, val title: String, val subtitle: String, val thumb: String?)
 
 /**
@@ -81,8 +85,8 @@ object YtAccount {
         )
     }
 
-    private fun post(endpoint: String, body: JSONObject = JSONObject()): JSONObject {
-        val c = cookie ?: throw AuthExpiredException()
+    private fun post(endpoint: String, body: JSONObject = JSONObject(), auth: Boolean = true): JSONObject {
+        val c = if (auth) cookie ?: throw AuthExpiredException() else null
         val lang = Locale.getDefault().language.takeIf { it.matches(Regex("[a-z]{2,3}")) } ?: "en"
         body.put(
             "context",
@@ -94,16 +98,20 @@ object YtAccount {
         val req = Request.Builder()
             .url("$ORIGIN/youtubei/v1/$endpoint?prettyPrint=false")
             .post(body.toString().toRequestBody("application/json".toMediaType()))
-            .header("Cookie", c)
-            .header("Authorization", authHeader(c))
             .header("X-Origin", ORIGIN)
             .header("Origin", ORIGIN)
             .header("Referer", "$ORIGIN/")
-            .header("X-Goog-AuthUser", "0")
             .header("User-Agent", OkDownloader.USER_AGENT)
+            .apply {
+                if (c != null) {
+                    header("Cookie", c)
+                    header("Authorization", authHeader(c))
+                    header("X-Goog-AuthUser", "0")
+                }
+            }
             .build()
         http.newCall(req).execute().use { r ->
-            if (r.code == 401 || r.code == 403) throw AuthExpiredException()
+            if (c != null && (r.code == 401 || r.code == 403)) throw AuthExpiredException()
             if (!r.isSuccessful) throw IOException("YouTube Music ответил HTTP ${r.code}")
             return JSONObject(r.body?.string() ?: "{}")
         }
@@ -174,6 +182,53 @@ object YtAccount {
         post(if (liked) "like/like" else "like/removelike",
             JSONObject().put("target", JSONObject().put("videoId", videoId)))
         Unit
+    }
+
+    /**
+     * Страница исполнителя YouTube Music (без входа в аккаунт): его популярные песни и клипы
+     * и блок «Похожие исполнители» (узнаём по типу ссылки, а не по названию — оно зависит от языка).
+     */
+    fun artistPage(browseId: String): ArtistPage {
+        val json = post("browse", JSONObject().put("browseId", browseId), auth = false)
+        val name = findFirst(json, "header")?.let { h ->
+            text(findFirst(h, "title") ?: h.optJSONObject("title"))
+        }.orEmpty()
+        val songs = mutableListOf<Track>()
+        val videos = mutableListOf<Track>()
+        val similar = mutableListOf<ArtistRef>()
+        walk(json) { key, obj ->
+            when (key) {
+                "musicResponsiveListItemRenderer" -> listItem(obj)?.let {
+                    songs += if (it.artist.isBlank()) it.copy(artist = name) else it
+                }
+                "musicTwoRowItemRenderer" -> {
+                    val nav = obj.optJSONObject("navigationEndpoint")
+                    val vid = nav?.optJSONObject("watchEndpoint")?.optString("videoId").orEmpty()
+                    val browse = nav?.optJSONObject("browseEndpoint")
+                    val id = browse?.optString("browseId").orEmpty()
+                    when {
+                        vid.isNotEmpty() -> videos += Track(
+                            id = vid,
+                            title = text(obj.optJSONObject("title")),
+                            artist = name.ifEmpty { firstRun(obj.optJSONObject("subtitle")) },
+                            artistUrl = null,
+                            thumb = thumb(obj),
+                            durationSec = 0,
+                        )
+                        id.startsWith("UC") && id != browseId &&
+                            browse.toString().contains("MUSIC_PAGE_TYPE_ARTIST") -> {
+                            val n = text(obj.optJSONObject("title"))
+                            if (n.isNotBlank()) similar += ArtistRef(n, id)
+                        }
+                    }
+                }
+            }
+        }
+        return ArtistPage(
+            ref = ArtistRef(name, browseId),
+            songs = (songs + videos).distinctBy { it.id },
+            similar = similar.distinctBy { it.id },
+        )
     }
 
     // ---------- разбор ответов ----------

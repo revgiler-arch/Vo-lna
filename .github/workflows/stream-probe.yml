@@ -2,6 +2,8 @@ name: Probe streams
 
 on:
   workflow_dispatch:
+  push:
+    branches: [artists-probe]
 
 permissions:
   contents: write
@@ -16,7 +18,7 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - run: chmod +x gradlew && ./gradlew :app:testReleaseUnitTest --tests com.volna.music.StreamProbeTest -i 2>&1 | tail -150 > /tmp/gradle.txt || true
+      - run: chmod +x gradlew && ./gradlew :app:testReleaseUnitTest --tests com.volna.music.ArtistsProbeTest -i 2>&1 | tail -150 > /tmp/gradle.txt || true
       - name: Publish
         if: always()
         run: |
