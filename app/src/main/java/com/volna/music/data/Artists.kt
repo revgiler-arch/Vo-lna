@@ -87,10 +87,14 @@ object Artists {
         'я' to "ya", 'ə' to "e", 'ı' to "i", 'ö' to "o", 'ü' to "u", 'ç' to "ch", 'ş' to "sh", 'ğ' to "g",
     )
 
-    /** Похожи ли имена: «стима» ≈ «Стим», «skillet» ≈ «Skillet», «би2» ≈ «Би-2». */
-    fun sameName(a: String, b: String): Boolean {
-        val x = norm(a)
-        val y = norm(b)
+    private val LEET = mapOf('0' to 'o', '1' to 'i', '3' to 'e', '4' to 'a', '5' to 's', '7' to 't', '8' to 'b')
+
+    /** Похожи ли имена: «стима» ≈ «Стим» ≈ «ST1M», «skillet» ≈ «Skillet», «би2» ≈ «Би-2». */
+    fun sameName(a: String, b: String): Boolean =
+        close(norm(a), norm(b)) ||
+            close(norm(a).map { LEET[it] ?: it }.joinToString(""), norm(b).map { LEET[it] ?: it }.joinToString(""))
+
+    private fun close(x: String, y: String): Boolean {
         if (x.isEmpty() || y.isEmpty()) return false
         if (x == y) return true
         val short = minOf(x.length, y.length)
@@ -124,14 +128,31 @@ object Artists {
         misses[key]?.let { if (System.currentTimeMillis() - it < MISS_TTL) return@withContext null }
         // сетевая ошибка — не запоминаем, попробуем в следующий раз
         val found = net.withPermit { runCatching { searchArtists(name) }.getOrNull() } ?: return@withContext null
-        // из похожих по имени — лучше точное совпадение и тот же алфавит («стима» → Стим, а не STIM)
+        // из похожих по имени — лучше точное совпадение, тот же алфавит и популярность («стима» → ST1M)
         val cyr = Regex("[а-яё]", RegexOption.IGNORE_CASE)
-        val hit = found.take(6).filter { sameName(name, it.name) }.maxByOrNull { a ->
-            (if (a.name.trim().equals(name.trim(), ignoreCase = true)) 4 else 0) +
-                (if (cyr.containsMatchIn(a.name) == cyr.containsMatchIn(name)) 2 else 0) +
-                (if (norm(a.name) == norm(name)) 1 else 0) -
-                found.indexOf(a) * 0.1
-        }
+        val queryCyr = cyr.containsMatchIn(name)
+        val matches = found.take(6).filter { sameName(name, it.first.name) }
+        val needPages = queryCyr && matches.size > 1 && matches.none { cyr.containsMatchIn(it.first.name) }
+        val russianSongs: Map<String, Boolean> = if (needPages) {
+            // имена латиницей не отличить — смотрим, на каком языке их песни
+            coroutineScope {
+                matches.take(3).map { (r, _) ->
+                    async {
+                        val songs = page(r)?.songs.orEmpty().take(12)
+                        r.id to (songs.isNotEmpty() && songs.count { cyr.containsMatchIn(it.title) } * 3 >= songs.size)
+                    }
+                }.awaitAll().toMap()
+            }
+        } else emptyMap()
+        val hit = matches.maxByOrNull { (a, subs) ->
+            (if (a.name.trim().equals(name.trim(), ignoreCase = true)) 4.0 else 0.0) +
+                (if (cyr.containsMatchIn(a.name) == queryCyr) 2.0 else 0.0) +
+                (if (russianSongs[a.id] == true) 2.0 else 0.0) +
+                (if (norm(a.name) == norm(name)) 1.0 else 0.0) -
+                kotlin.math.abs(norm(a.name).length - norm(name).length) * 0.5 +
+                kotlin.math.log10(subs.coerceAtLeast(0).toDouble() + 1) * 0.3 -
+                found.indexOf(a to subs) * 0.1
+        }?.first
         if (hit == null) {
             misses[key] = System.currentTimeMillis()
             return@withContext null
@@ -146,12 +167,13 @@ object Artists {
         return null
     }
 
-    private fun searchArtists(q: String): List<ArtistRef> {
+    /** Исполнители по запросу и число подписчиков. */
+    private fun searchArtists(q: String): List<Pair<ArtistRef, Long>> {
         val yt = ServiceList.YouTube
         val qh = yt.searchQHFactory.fromQuery(q, listOf(YoutubeSearchQueryHandlerFactory.MUSIC_ARTISTS), "")
         return SearchInfo.getInfo(yt, qh).relatedItems.filterIsInstance<ChannelInfoItem>().mapNotNull { item ->
             val id = Regex("""UC[\w-]{22}""").find(item.url ?: "")?.value ?: return@mapNotNull null
-            ArtistRef(item.name ?: "", id)
+            ArtistRef(item.name ?: "", id) to item.subscriberCount
         }
     }
 

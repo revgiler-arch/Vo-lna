@@ -87,7 +87,9 @@ object YtAccount {
 
     private fun post(endpoint: String, body: JSONObject = JSONObject(), auth: Boolean = true): JSONObject {
         val c = if (auth) cookie ?: throw AuthExpiredException() else null
-        val lang = Locale.getDefault().language.takeIf { it.matches(Regex("[a-z]{2,3}")) } ?: "en"
+        val lang = runCatching { org.schabi.newpipe.extractor.NewPipe.getPreferredLocalization().languageCode }
+            .getOrNull()?.takeIf { it.matches(Regex("[a-z]{2,3}")) }
+            ?: Locale.getDefault().language.takeIf { it.matches(Regex("[a-z]{2,3}")) } ?: "en"
         body.put(
             "context",
             JSONObject().put(
