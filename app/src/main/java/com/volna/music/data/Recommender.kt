@@ -69,10 +69,19 @@ object Recommender {
     private suspend fun refOf(taste: Taste, key: String): ArtistRef? =
         taste.sample[key]?.let { Artists.of(it) } ?: taste.names[key]?.let { Artists.lookup(it) }
 
-    /** Последние поиски, которые оказались именами исполнителей. */
+    /**
+     * Последние поиски, которые оказались именами исполнителей. У настоящего исполнителя
+     * есть «похожие»; у каналов-сборников вроде «грустные песни» — нет, такие не берём.
+     */
     private suspend fun searchedArtists(db: MusicDb, n: Int): List<ArtistRef> {
         val qs = withContext(Dispatchers.IO) { db.recentSearches(n) }
-        return coroutineScope { qs.map { async { Artists.lookup(it) } }.awaitAll().filterNotNull() }
+        return coroutineScope {
+            qs.map { q ->
+                async {
+                    Artists.lookup(q)?.takeIf { ref -> Artists.page(ref)?.similar?.isNotEmpty() == true }
+                }
+            }.awaitAll().filterNotNull()
+        }
     }
 
     /** Похожие исполнители по нескольким страницам: кто упоминается чаще и выше — тот ближе. */

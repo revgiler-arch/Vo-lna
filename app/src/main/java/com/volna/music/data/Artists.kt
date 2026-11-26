@@ -124,7 +124,14 @@ object Artists {
         misses[key]?.let { if (System.currentTimeMillis() - it < MISS_TTL) return@withContext null }
         // сетевая ошибка — не запоминаем, попробуем в следующий раз
         val found = net.withPermit { runCatching { searchArtists(name) }.getOrNull() } ?: return@withContext null
-        val hit = found.take(5).firstOrNull { sameName(name, it.name) }
+        // из похожих по имени — лучше точное совпадение и тот же алфавит («стима» → Стим, а не STIM)
+        val cyr = Regex("[а-яё]", RegexOption.IGNORE_CASE)
+        val hit = found.take(6).filter { sameName(name, it.name) }.maxByOrNull { a ->
+            (if (a.name.trim().equals(name.trim(), ignoreCase = true)) 4 else 0) +
+                (if (cyr.containsMatchIn(a.name) == cyr.containsMatchIn(name)) 2 else 0) +
+                (if (norm(a.name) == norm(name)) 1 else 0) -
+                found.indexOf(a) * 0.1
+        }
         if (hit == null) {
             misses[key] = System.currentTimeMillis()
             return@withContext null
