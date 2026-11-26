@@ -20,6 +20,12 @@ class ArtistsProbeTest {
         val t2 = Track("y", "Доча", "Jah Khalib", null, null, 0)
         val t3 = Track("z", "Патрон", "Miyagi & Andy Panda", null, null, 0)
         out.append("candidates: ${Artists.candidates(t1)} ${Artists.candidates(t2)} ${Artists.candidates(t3)}\n")
+        for (q in listOf("стима", "стим", "Стим рэп")) {
+            val yt = org.schabi.newpipe.extractor.ServiceList.YouTube
+            val qh = yt.searchQHFactory.fromQuery(q, listOf(org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory.MUSIC_ARTISTS), "")
+            val items = runCatching { org.schabi.newpipe.extractor.search.SearchInfo.getInfo(yt, qh).relatedItems }.getOrDefault(emptyList())
+            out.append("search $q: ${items.take(6).joinToString { it.name + " [" + ((it as? org.schabi.newpipe.extractor.channel.ChannelInfoItem)?.subscriberCount ?: -1) + "]" }}\n")
+        }
         for (q in listOf("стима", "Земфира", "skillet", "гуф", "Jah Khalib", "MATRANG", "грустные песни")) {
             val ref = runCatching { Artists.lookup(q) }.getOrElse { out.append("$q: EXC ${it.message}\n"); null }
             if (ref == null) { out.append("$q → нет исполнителя\n"); continue }
